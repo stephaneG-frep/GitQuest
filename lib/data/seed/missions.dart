@@ -98,6 +98,32 @@ final missions = <Mission>[
     },
   ),
   Mission(
+    id: 'merge-conflict',
+    title: 'Conflit de fusion',
+    context:
+        'Deux branches ont modifié différemment README.md. Provoque la fusion, choisis le contenu final et termine proprement le merge.',
+    objectives: const [
+      'Créer deux modifications divergentes de README.md',
+      'Lancer la fusion et examiner le conflit',
+      'Choisir --ours ou --theirs',
+      'Ajouter le fichier résolu et terminer le commit',
+    ],
+    hints: const [
+      'Un conflit apparaît lorsque les deux branches changent la même zone depuis leur ancêtre commun.',
+      'Après git merge, utilise git checkout --ours ou --theirs sur le fichier.',
+      'git checkout --theirs README.md → git add README.md → git commit -m "Résout le conflit"',
+    ],
+    xp: 220,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      return repo.conflicts.isEmpty &&
+          repo.reflog.any(
+            (entry) => entry.contains('merge') && entry.contains('conflit'),
+          ) &&
+          repo.commits.any((commit) => commit.parentIds.length == 2);
+    },
+  ),
+  Mission(
     id: 'clean-staging',
     title: 'Le bon contenu',
     context:
@@ -187,6 +213,48 @@ final missions = <Mission>[
           repo.commandHistory
               .where((command) => command == 'git tag')
               .isNotEmpty;
+    },
+  ),
+  Mission(
+    id: 'targeted-change',
+    title: 'Récupération ciblée',
+    context:
+        'Un correctif utile existe sur une autre branche, mais tu ne veux pas tout fusionner. Rejoue uniquement son commit.',
+    objectives: const [
+      'Identifier l’identifiant du correctif',
+      'Revenir sur la branche destinataire',
+      'Appliquer le commit avec cherry-pick',
+    ],
+    hints: const [
+      'Chaque commit peut être désigné par son identifiant court.',
+      'Utilise git cherry-pick suivi de l’identifiant.',
+      'git log --oneline → git cherry-pick identifiant',
+    ],
+    xp: 180,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      return repo.reflog.any((entry) => entry.contains('cherry-pick'));
+    },
+  ),
+  Mission(
+    id: 'linear-history',
+    title: 'Historique linéaire',
+    context:
+        'Ta branche locale doit repartir du dernier commit de main. Rejoue tes commits au-dessus sans créer de commit de fusion.',
+    objectives: const [
+      'Conserver une copie de travail propre',
+      'Lancer git rebase main depuis ta branche',
+      'Vérifier les nouveaux identifiants dans le reflog',
+    ],
+    hints: const [
+      'Le rebase déplace la base et recrée les commits : leurs identifiants changent.',
+      'Place-toi sur ta branche, puis utilise git rebase.',
+      'git switch ta-branche → git rebase main → git reflog',
+    ],
+    xp: 240,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      return repo.reflog.any((entry) => entry.contains('rebase: onto main'));
     },
   ),
 ];

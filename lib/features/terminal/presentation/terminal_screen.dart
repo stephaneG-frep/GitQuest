@@ -40,6 +40,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
     'commit --amend -m ""',
     'revert HEAD',
     'tag v1.0.0',
+    'checkout --ours ',
+    'checkout --theirs ',
+    'cherry-pick ',
+    'rebase main',
   ];
 
   @override
@@ -489,6 +493,62 @@ class RepositoryPanel extends StatelessWidget {
                           ),
                         ),
                       ),
+                    if (repository.conflicts.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withValues(alpha: .1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.error.withValues(alpha: .35),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'Fusion interrompue',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            for (final conflict in repository.conflicts.values)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  '${conflict.path}\n  actuelle : ${conflict.currentContent ?? 'fichier absent'}\n  ${conflict.incomingBranch} : ${conflict.incomingContent ?? 'fichier absent'}',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 12,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Choisis une version dans le terminal, puis exécute git add et git commit.',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       'HISTORIQUE',

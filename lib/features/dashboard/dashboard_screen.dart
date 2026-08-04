@@ -352,6 +352,14 @@ class _QuickHelpState extends State<_QuickHelp> {
     ('git diff', 'Voir les différences'),
     ('git switch -c branche', 'Créer et activer une branche'),
     ('git merge branche', 'Fusionner une branche'),
+    (
+      'git checkout --ours fichier',
+      'Garder la version actuelle pendant un conflit',
+    ),
+    (
+      'git checkout --theirs fichier',
+      'Garder la version entrante pendant un conflit',
+    ),
     ('git restore fichier', 'Restaurer un fichier'),
     ('git commit --amend -m "Message"', 'Corriger le dernier commit'),
     ('git reset --soft HEAD~1', 'Retirer un commit sans perdre les fichiers'),
@@ -359,6 +367,8 @@ class _QuickHelpState extends State<_QuickHelp> {
     ('git stash', 'Mettre le travail de côté'),
     ('git tag v1.0.0', 'Marquer une version'),
     ('git reflog', 'Retrouver les déplacements de HEAD'),
+    ('git cherry-pick identifiant', 'Rejouer un commit ciblé'),
+    ('git rebase main', 'Rejouer sa branche au-dessus de main'),
     ('git remote -v', 'Lister les dépôts distants'),
     ('git push -u origin main', 'Publier la branche main'),
   ];

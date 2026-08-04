@@ -28,6 +28,38 @@ class VirtualCommit {
   final Map<String, String> snapshot;
 }
 
+class MergeConflict {
+  const MergeConflict({
+    required this.path,
+    required this.baseContent,
+    required this.currentContent,
+    required this.incomingContent,
+    required this.incomingBranch,
+  });
+
+  final String path;
+  final String? baseContent;
+  final String? currentContent;
+  final String? incomingContent;
+  final String incomingBranch;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'path': path,
+    'baseContent': baseContent,
+    'currentContent': currentContent,
+    'incomingContent': incomingContent,
+    'incomingBranch': incomingBranch,
+  };
+
+  factory MergeConflict.fromJson(Map<String, dynamic> json) => MergeConflict(
+    path: json['path'] as String,
+    baseContent: json['baseContent'] as String?,
+    currentContent: json['currentContent'] as String?,
+    incomingContent: json['incomingContent'] as String?,
+    incomingBranch: json['incomingBranch'] as String,
+  );
+}
+
 class VirtualRepository {
   VirtualRepository({this.name = 'atelier'}) {
     files['README.md'] = VirtualFile('README.md', '# Mon aventure GitQuest\n');
@@ -46,6 +78,8 @@ class VirtualRepository {
   final List<Map<String, String>> stashes = <Map<String, String>>[];
   final List<String> commandHistory = <String>[];
   final List<String> reflog = <String>[];
+  final Map<String, MergeConflict> conflicts = <String, MergeConflict>{};
+  String? pendingMergeBranch;
   int _commitSequence = 0;
 
   VirtualCommit createCommit(String message, {List<String>? parents}) {
@@ -110,6 +144,20 @@ class VirtualRepository {
         .firstOrNull;
   }
 
+  void checkoutSnapshot(Map<String, String> snapshot) {
+    files
+      ..clear()
+      ..addEntries(
+        snapshot.entries.map(
+          (entry) => MapEntry(
+            entry.key,
+            VirtualFile(entry.key, entry.value, state: FileState.committed),
+          ),
+        ),
+      );
+    stagedFiles.clear();
+  }
+
   VirtualCommit? get head {
     final id = branches[currentBranch];
     if (id == null) return null;
@@ -135,6 +183,10 @@ class VirtualRepository {
     'stashes': stashes,
     'commandHistory': commandHistory,
     'reflog': reflog,
+    'pendingMergeBranch': pendingMergeBranch,
+    'conflicts': conflicts.map(
+      (path, conflict) => MapEntry(path, conflict.toJson()),
+    ),
     'commitSequence': _commitSequence,
     'commits': commits
         .map(
@@ -218,6 +270,17 @@ class VirtualRepository {
     repository.reflog.addAll(
       (json['reflog'] as List<dynamic>? ?? <dynamic>[]).whereType<String>(),
     );
+    repository.pendingMergeBranch = json['pendingMergeBranch'] as String?;
+    final rawConflicts =
+        json['conflicts'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    repository.conflicts.addAll(
+      rawConflicts.map(
+        (path, value) => MapEntry(
+          path,
+          MergeConflict.fromJson(value as Map<String, dynamic>),
+        ),
+      ),
+    );
     for (final raw in json['commits'] as List<dynamic>? ?? <dynamic>[]) {
       final commit = raw as Map<String, dynamic>;
       repository.commits.add(
@@ -266,6 +329,8 @@ class VirtualRepository {
     stashes.clear();
     commandHistory.clear();
     reflog.clear();
+    conflicts.clear();
+    pendingMergeBranch = null;
     _commitSequence = 0;
   }
 }

@@ -7,6 +7,10 @@
 - Ajout des missions « Mauvais message », « Commit indésirable » et « Préparer une version ».
 - Affichage des tags dans le visualiseur de dépôt.
 - Corrections responsive pour le Honor MTN NX1M.
+- Détection des conflits de fusion à partir de l’ancêtre commun.
+- Résolution avec `git checkout --ours` ou `--theirs`, commit de merge et `merge --abort`.
+- Ajout de `git cherry-pick` et du rebase pédagogique des branches propres.
+- Ajout de trois missions avancées sur les conflits, cherry-pick et rebase.
 
 ## 1.0.0 — 2026-08-03
 

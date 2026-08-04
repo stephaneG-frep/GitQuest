@@ -74,6 +74,8 @@ class GitCommandEngine {
       'stash' => _stash(args),
       'tag' => _tag(args),
       'reflog' => _reflog(),
+      'cherry-pick' => _cherryPick(args),
+      'rebase' => _rebase(args),
       'remote' => _remote(args),
       'push' || 'pull' || 'fetch' => _network(args),
       'comit' => const CommandResult(
@@ -112,6 +114,7 @@ class GitCommandEngine {
   git init, status, add, commit, log, diff
   git branch, switch, checkout, merge
   git restore, reset, revert, stash, tag, reflog
+  git cherry-pick, rebase
   git remote, push, pull, fetch
 
 Astuce : commence par git init, puis git status.''');
@@ -197,6 +200,7 @@ Astuce : commence par git init, puis git status.''');
         .map((file) => file.path)
         .toList();
     final staged = repository.stagedFiles.toList();
+    final conflicted = repository.conflicts.keys.toList();
     final buffer = StringBuffer('Sur la branche ${repository.currentBranch}\n');
     if (repository.commits.isEmpty) {
       buffer.writeln('Aucun commit pour le moment');
@@ -204,6 +208,11 @@ Astuce : commence par git init, puis git status.''');
     if (staged.isNotEmpty) {
       buffer.writeln(
         '\nModifications qui seront validées :\n  A  ${staged.join('\n  A  ')}',
+      );
+    }
+    if (conflicted.isNotEmpty) {
+      buffer.writeln(
+        '\nChemins non fusionnés :\n  U  ${conflicted.join('\n  U  ')}\n\nRésous chaque fichier, puis utilise git add.',
       );
     }
     if (modified.isNotEmpty) {
@@ -216,7 +225,10 @@ Astuce : commence par git init, puis git status.''');
         '\nFichiers non suivis :\n  ?  ${untracked.join('\n  ?  ')}',
       );
     }
-    if (staged.isEmpty && modified.isEmpty && untracked.isEmpty) {
+    if (staged.isEmpty &&
+        modified.isEmpty &&
+        untracked.isEmpty &&
+        conflicted.isEmpty) {
       buffer.writeln('Rien à valider, la copie de travail est propre.');
     }
     return CommandResult(buffer.toString().trim());
@@ -246,6 +258,7 @@ Astuce : commence par git init, puis git status.''');
     for (final path in paths) {
       repository.stagedFiles.add(path);
       repository.files[path]!.state = FileState.staged;
+      repository.conflicts.remove(path);
     }
     return CommandResult(
       '${paths.length} fichier(s) placé(s) dans la zone de préparation.',
@@ -280,13 +293,34 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    if (repository.conflicts.isNotEmpty) {
+      return const CommandResult(
+        'La fusion contient encore des conflits. Résous-les avant de créer le commit.',
+        type: TerminalOutputType.error,
+      );
+    }
     if (repository.stagedFiles.isEmpty) {
       return const CommandResult(
         'Aucun changement préparé.\nUtilise d’abord git add.',
         type: TerminalOutputType.error,
       );
     }
-    final commit = repository.createCommit(args[messageIndex + 1]);
+    final pendingMerge = repository.pendingMergeBranch;
+    final currentHead = repository.head?.id;
+    final incomingHead = pendingMerge == null
+        ? null
+        : repository.branches[pendingMerge];
+    final commit = repository.createCommit(
+      args[messageIndex + 1],
+      parents:
+          pendingMerge != null && currentHead != null && incomingHead != null
+          ? <String>[currentHead, incomingHead]
+          : null,
+    );
+    if (pendingMerge != null) {
+      repository.mergedBranches.add(pendingMerge);
+      repository.pendingMergeBranch = null;
+    }
     return CommandResult(
       '[${repository.currentBranch} ${commit.id}] ${commit.message}\n${commit.snapshot.length} fichier(s) enregistré(s).',
       type: TerminalOutputType.success,
@@ -368,6 +402,49 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    if (args[2] == '--ours' || args[2] == '--theirs') {
+      if (args.length < 4) {
+        return const CommandResult(
+          'Indique le fichier en conflit à résoudre.',
+          type: TerminalOutputType.error,
+        );
+      }
+      final path = args[3];
+      final conflict = repository.conflicts[path];
+      if (conflict == null) {
+        return CommandResult(
+          '$path n’est pas en conflit.',
+          type: TerminalOutputType.error,
+        );
+      }
+      final content = args[2] == '--ours'
+          ? conflict.currentContent
+          : conflict.incomingContent;
+      repository.files[path] = VirtualFile(
+        path,
+        content ?? '',
+        state: FileState.modified,
+      );
+      return CommandResult(
+        'Version ${args[2] == '--ours' ? 'actuelle' : 'entrante'} choisie pour $path.\nVérifie le fichier, puis exécute git add $path.',
+        type: TerminalOutputType.success,
+      );
+    }
+    if (repository.conflicts.isNotEmpty) {
+      return const CommandResult(
+        'Termine ou annule la fusion avant de changer de branche.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.stagedFiles.isNotEmpty ||
+        repository.files.values.any(
+          (file) => file.state == FileState.modified,
+        )) {
+      return const CommandResult(
+        'Des changements locaux risquent d’être écrasés. Crée un commit ou utilise git stash avant de changer de branche.',
+        type: TerminalOutputType.error,
+      );
+    }
     var targetIndex = 2;
     if (args[2] == '-c') {
       if (args.length < 4) {
@@ -394,6 +471,11 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     repository.currentBranch = target;
+    final targetHead = repository.head;
+    if (targetHead != null) {
+      repository.checkoutSnapshot(targetHead.snapshot);
+    }
+    repository.reflog.add('${targetHead?.id ?? '0000000'} checkout: $target');
     return CommandResult(
       'Basculement sur la branche “$target”.',
       type: TerminalOutputType.success,
@@ -403,6 +485,24 @@ Astuce : commence par git init, puis git status.''');
   CommandResult _merge(List<String> args) {
     final error = _requireRepository();
     if (error != null) return error;
+    if (args.length >= 3 && args[2] == '--abort') {
+      if (repository.pendingMergeBranch == null) {
+        return const CommandResult(
+          'Aucune fusion en cours à annuler.',
+          type: TerminalOutputType.warning,
+        );
+      }
+      repository.checkoutSnapshot(
+        repository.head?.snapshot ?? <String, String>{},
+      );
+      repository
+        ..conflicts.clear()
+        ..pendingMergeBranch = null;
+      return const CommandResult(
+        'Fusion annulée. La copie de travail a été restaurée.',
+        type: TerminalOutputType.success,
+      );
+    }
     if (args.length < 3) {
       return const CommandResult(
         'Indique une branche à fusionner : git merge feature',
@@ -422,28 +522,316 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    final sourceHead = repository.branches[source];
-    if (sourceHead == null ||
-        sourceHead == repository.branches[repository.currentBranch]) {
+    if (repository.pendingMergeBranch != null) {
+      return const CommandResult(
+        'Une fusion est déjà en cours. Résous-la ou utilise git merge --abort.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.stagedFiles.isNotEmpty ||
+        repository.files.values.any(
+          (file) => file.state == FileState.modified,
+        )) {
+      return const CommandResult(
+        'La copie de travail doit être propre avant une fusion.',
+        type: TerminalOutputType.error,
+      );
+    }
+    final sourceHeadId = repository.branches[source];
+    final currentHeadId = repository.branches[repository.currentBranch];
+    if (sourceHeadId == null || sourceHeadId == currentHeadId) {
       repository.mergedBranches.add(source);
       return const CommandResult(
         'Déjà à jour.',
         type: TerminalOutputType.success,
       );
     }
-    final currentHead = repository.branches[repository.currentBranch];
-    repository.branches[repository.currentBranch] = sourceHead;
-    repository.mergedBranches.add(source);
-    if (currentHead != null) {
-      repository.createCommit(
-        'Fusion de $source',
-        parents: <String>[currentHead, sourceHead],
+    final sourceHead = repository.commitByReference(sourceHeadId)!;
+    if (currentHeadId == null || _isAncestor(currentHeadId, sourceHeadId)) {
+      repository.branches[repository.currentBranch] = sourceHeadId;
+      repository.checkoutSnapshot(sourceHead.snapshot);
+      repository.mergedBranches.add(source);
+      repository.reflog.add('$sourceHeadId merge $source: fast-forward');
+      return CommandResult(
+        'Mise à jour en avance rapide vers $sourceHeadId.\nBranche $source fusionnée.',
+        type: TerminalOutputType.success,
       );
     }
+    if (_isAncestor(sourceHeadId, currentHeadId)) {
+      repository.mergedBranches.add(source);
+      return const CommandResult(
+        'Déjà à jour.',
+        type: TerminalOutputType.success,
+      );
+    }
+    final currentHead = repository.commitByReference(currentHeadId)!;
+    final base = _commonAncestor(currentHeadId, sourceHeadId);
+    final baseSnapshot = base?.snapshot ?? <String, String>{};
+    final merged = Map<String, String>.from(currentHead.snapshot);
+    final conflicts = <String, MergeConflict>{};
+    final paths = <String>{
+      ...baseSnapshot.keys,
+      ...currentHead.snapshot.keys,
+      ...sourceHead.snapshot.keys,
+    };
+    for (final path in paths) {
+      final original = baseSnapshot[path];
+      final ours = currentHead.snapshot[path];
+      final theirs = sourceHead.snapshot[path];
+      final oursChanged = ours != original;
+      final theirsChanged = theirs != original;
+      if (oursChanged && theirsChanged && ours != theirs) {
+        conflicts[path] = MergeConflict(
+          path: path,
+          baseContent: original,
+          currentContent: ours,
+          incomingContent: theirs,
+          incomingBranch: source,
+        );
+        continue;
+      }
+      if (!oursChanged && theirsChanged) {
+        if (theirs == null) {
+          merged.remove(path);
+        } else {
+          merged[path] = theirs;
+        }
+      }
+    }
+    repository.checkoutSnapshot(merged);
+    if (conflicts.isNotEmpty) {
+      repository
+        ..conflicts.addAll(conflicts)
+        ..pendingMergeBranch = source;
+      repository.reflog.add(
+        '$currentHeadId merge $source: conflit dans ${conflicts.keys.join(', ')}',
+      );
+      for (final conflict in conflicts.values) {
+        repository.files[conflict.path] = VirtualFile(
+          conflict.path,
+          '<<<<<<< ${repository.currentBranch}\n${conflict.currentContent ?? ''}\n=======\n${conflict.incomingContent ?? ''}\n>>>>>>> $source',
+          state: FileState.conflicted,
+        );
+      }
+      return CommandResult(
+        'Conflit de fusion dans ${conflicts.keys.join(', ')}.\nChoisis une version avec git checkout --ours fichier ou git checkout --theirs fichier, puis utilise git add et git commit.',
+        type: TerminalOutputType.warning,
+      );
+    }
+    repository.createCommit(
+      'Fusion de $source',
+      parents: <String>[currentHeadId, sourceHeadId],
+    );
+    repository.mergedBranches.add(source);
     return CommandResult(
       'Branche $source fusionnée dans ${repository.currentBranch}.',
       type: TerminalOutputType.success,
     );
+  }
+
+  CommandResult _cherryPick(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (args.length < 3) {
+      return const CommandResult(
+        'Indique le commit à appliquer : git cherry-pick abc1234',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.head == null) {
+      return const CommandResult(
+        'Crée d’abord un commit de base.',
+        type: TerminalOutputType.error,
+      );
+    }
+    final picked = repository.commitByReference(args[2]);
+    if (picked == null) {
+      return CommandResult(
+        'Commit introuvable : ${args[2]}',
+        type: TerminalOutputType.error,
+      );
+    }
+    final parent = picked.parentIds.firstOrNull == null
+        ? null
+        : repository.commitByReference(picked.parentIds.first);
+    final base = parent?.snapshot ?? <String, String>{};
+    final changes = _changesBetween(base, picked.snapshot);
+    final current = repository.head!.snapshot;
+    final conflicting = changes.where((path) {
+      final currentValue = current[path];
+      return currentValue != base[path] &&
+          currentValue != picked.snapshot[path];
+    }).toList();
+    if (conflicting.isNotEmpty) {
+      return CommandResult(
+        'Cherry-pick interrompu : ${conflicting.join(', ')} a aussi changé sur la branche courante.\nCette simulation protège ton dépôt : fusionne ou restaure le fichier avant de réessayer.',
+        type: TerminalOutputType.warning,
+      );
+    }
+    final result = Map<String, String>.from(current);
+    for (final path in changes) {
+      final content = picked.snapshot[path];
+      if (content == null) {
+        result.remove(path);
+      } else {
+        result[path] = content;
+      }
+    }
+    repository.checkoutSnapshot(result);
+    repository.stagedFiles.addAll(changes);
+    for (final path in changes.where(repository.files.containsKey)) {
+      repository.files[path]!.state = FileState.staged;
+    }
+    final commit = repository.createCommit(picked.message);
+    repository.reflog.add('${commit.id} cherry-pick: ${picked.id}');
+    return CommandResult(
+      '[${repository.currentBranch} ${commit.id}] ${commit.message}\nLe changement ${picked.id} a été rejoué sur la branche courante.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _rebase(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (args.length < 3) {
+      return const CommandResult(
+        'Indique la branche de base : git rebase main',
+        type: TerminalOutputType.error,
+      );
+    }
+    final targetBranch = args[2];
+    if (!repository.branches.containsKey(targetBranch)) {
+      return CommandResult(
+        'Branche inconnue : $targetBranch',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (targetBranch == repository.currentBranch) {
+      return const CommandResult(
+        'Impossible de rebaser une branche sur elle-même.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.stagedFiles.isNotEmpty ||
+        repository.files.values.any(
+          (file) => file.state != FileState.committed,
+        )) {
+      return const CommandResult(
+        'La copie de travail doit être propre avant un rebase.',
+        type: TerminalOutputType.error,
+      );
+    }
+    final currentHeadId = repository.branches[repository.currentBranch];
+    final targetHeadId = repository.branches[targetBranch];
+    if (currentHeadId == null || targetHeadId == null) {
+      return const CommandResult(
+        'Les deux branches doivent contenir au moins un commit.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (_isAncestor(currentHeadId, targetHeadId)) {
+      repository.branches[repository.currentBranch] = targetHeadId;
+      repository.checkoutSnapshot(
+        repository.commitByReference(targetHeadId)!.snapshot,
+      );
+      return const CommandResult(
+        'Branche mise à jour en avance rapide : aucun commit à rejouer.',
+        type: TerminalOutputType.success,
+      );
+    }
+    final base = _commonAncestor(currentHeadId, targetHeadId);
+    final baseSnapshot = base?.snapshot ?? <String, String>{};
+    final currentHead = repository.commitByReference(currentHeadId)!;
+    final targetHead = repository.commitByReference(targetHeadId)!;
+    final ourChanges = _changesBetween(baseSnapshot, currentHead.snapshot);
+    final targetChanges = _changesBetween(baseSnapshot, targetHead.snapshot);
+    final conflicts = ourChanges
+        .where(
+          (path) =>
+              targetChanges.contains(path) &&
+              currentHead.snapshot[path] != targetHead.snapshot[path],
+        )
+        .toList();
+    if (conflicts.isNotEmpty) {
+      return CommandResult(
+        'Rebase arrêté avant toute modification : conflit possible dans ${conflicts.join(', ')}.\nRésous d’abord les changements divergents ou utilise une fusion.',
+        type: TerminalOutputType.warning,
+      );
+    }
+    final commitsToReplay = <VirtualCommit>[];
+    var cursor = currentHead;
+    while (cursor.id != base?.id) {
+      commitsToReplay.add(cursor);
+      if (cursor.parentIds.isEmpty) break;
+      final parent = repository.commitByReference(cursor.parentIds.first);
+      if (parent == null) break;
+      cursor = parent;
+    }
+    repository.branches[repository.currentBranch] = targetHeadId;
+    repository.checkoutSnapshot(targetHead.snapshot);
+    for (final original in commitsToReplay.reversed) {
+      final parent = original.parentIds.firstOrNull == null
+          ? null
+          : repository.commitByReference(original.parentIds.first);
+      final changes = _changesBetween(
+        parent?.snapshot ?? <String, String>{},
+        original.snapshot,
+      );
+      for (final path in changes) {
+        final content = original.snapshot[path];
+        if (content == null) {
+          repository.files.remove(path);
+        } else {
+          repository.files[path] = VirtualFile(
+            path,
+            content,
+            state: FileState.staged,
+          );
+        }
+      }
+      repository.stagedFiles.addAll(changes);
+      repository.createCommit(original.message);
+    }
+    repository.reflog.add('${repository.head!.id} rebase: onto $targetBranch');
+    return CommandResult(
+      '${commitsToReplay.length} commit(s) rejoué(s) sur $targetBranch.\nLes identifiants ont changé : ne rebase pas des commits déjà partagés.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  Set<String> _changesBetween(
+    Map<String, String> before,
+    Map<String, String> after,
+  ) => <String>{
+    ...before.keys,
+    ...after.keys,
+  }.where((path) => before[path] != after[path]).toSet();
+
+  bool _isAncestor(String possibleAncestor, String descendant) =>
+      _ancestorIds(descendant).contains(possibleAncestor);
+
+  Set<String> _ancestorIds(String start) {
+    final result = <String>{};
+    final pending = <String>[start];
+    while (pending.isNotEmpty) {
+      final id = pending.removeLast();
+      if (!result.add(id)) continue;
+      final commit = repository.commitByReference(id);
+      if (commit != null) pending.addAll(commit.parentIds);
+    }
+    return result;
+  }
+
+  VirtualCommit? _commonAncestor(String first, String second) {
+    final secondAncestors = _ancestorIds(second);
+    var cursor = repository.commitByReference(first);
+    while (cursor != null) {
+      if (secondAncestors.contains(cursor.id)) return cursor;
+      cursor = cursor.parentIds.firstOrNull == null
+          ? null
+          : repository.commitByReference(cursor.parentIds.first);
+    }
+    return null;
   }
 
   CommandResult _diff(List<String> args) {
