@@ -11,6 +11,10 @@
 - Résolution avec `git checkout --ours` ou `--theirs`, commit de merge et `merge --abort`.
 - Ajout de `git cherry-pick` et du rebase pédagogique des branches propres.
 - Ajout de trois missions avancées sur les conflits, cherry-pick et rebase.
+- Ajout du GitHub Lab local : dépôt distant, issues, pull requests, commentaires et revues.
+- Fusion d’une pull request via le moteur Git et fermeture automatique de l’issue liée.
+- Releases locales connectées aux tags du dépôt virtuel.
+- Ajout des badges Organisateur, Relecteur de code et Collaborateur.
 
 ## 1.0.0 — 2026-08-03
 

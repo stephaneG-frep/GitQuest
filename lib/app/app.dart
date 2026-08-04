@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/storage/local_progress_store.dart';
 import '../core/storage/virtual_repository_store.dart';
+import '../features/collaboration/data/collaboration_store.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/terminal/domain/git_command_engine.dart';
 import '../features/terminal/domain/virtual_repository.dart';
@@ -14,12 +15,14 @@ class GitQuestApp extends StatefulWidget {
     required this.store,
     this.repository,
     this.repositoryStore,
+    this.collaborationStore,
     super.key,
   });
 
   final LocalProgressStore store;
   final VirtualRepository? repository;
   final VirtualRepositoryStore? repositoryStore;
+  final CollaborationStore? collaborationStore;
 
   @override
   State<GitQuestApp> createState() => _GitQuestAppState();
@@ -32,6 +35,8 @@ class _GitQuestAppState extends State<GitQuestApp> {
     repository,
     onChanged: (value) => widget.repositoryStore?.save(value),
   );
+  late final CollaborationStore collaborationStore =
+      widget.collaborationStore ?? CollaborationStore();
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -46,6 +51,7 @@ class _GitQuestAppState extends State<GitQuestApp> {
         store: widget.store,
         repository: repository,
         engine: engine,
+        collaborationStore: collaborationStore,
         child: MaterialApp(
           title: 'GitQuest',
           debugShowCheckedModeBanner: false,

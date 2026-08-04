@@ -55,6 +55,7 @@ class _HomeShellState extends State<HomeShell> {
       const ProfileScreen(),
     ];
     final wide = MediaQuery.sizeOf(context).width >= 820;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final content = IndexedStack(index: index, children: pages);
     if (wide) {
       return Scaffold(
@@ -90,15 +91,18 @@ class _HomeShellState extends State<HomeShell> {
       );
     }
     return Scaffold(
+      resizeToAvoidBottomInset: index != 2,
       body: content,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        labelBehavior: MediaQuery.sizeOf(context).width < 420
-            ? NavigationDestinationLabelBehavior.onlyShowSelected
-            : NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (value) => setState(() => index = value),
-        destinations: destinations,
-      ),
+      bottomNavigationBar: keyboardVisible
+          ? null
+          : NavigationBar(
+              selectedIndex: index,
+              labelBehavior: MediaQuery.sizeOf(context).width < 420
+                  ? NavigationDestinationLabelBehavior.onlyShowSelected
+                  : NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: (value) => setState(() => index = value),
+              destinations: destinations,
+            ),
     );
   }
 }
@@ -109,6 +113,7 @@ class ScreenFrame extends StatelessWidget {
     required this.child,
     this.actions,
     this.floatingActionButton,
+    this.hideAppBarWithKeyboard = false,
     super.key,
   });
 
@@ -116,22 +121,32 @@ class ScreenFrame extends StatelessWidget {
   final Widget child;
   final List<Widget>? actions;
   final Widget? floatingActionButton;
+  final bool hideAppBarWithKeyboard;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      actions: actions,
-      scrolledUnderElevation: 0,
-    ),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1180),
-        child: child,
+  Widget build(BuildContext context) {
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Scaffold(
+      resizeToAvoidBottomInset: !hideAppBarWithKeyboard,
+      appBar: hideAppBarWithKeyboard && keyboardVisible
+          ? null
+          : AppBar(
+              title: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              actions: actions,
+              scrolledUnderElevation: 0,
+            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: child,
+        ),
       ),
-    ),
-    floatingActionButton: floatingActionButton,
-  );
+      floatingActionButton: floatingActionButton,
+    );
+  }
 }
 
 Future<void> unlockForCommand(BuildContext context, String command) async {

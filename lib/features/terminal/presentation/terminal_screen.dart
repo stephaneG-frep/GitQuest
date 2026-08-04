@@ -93,6 +93,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
     final terminal = _terminal(repository);
     return ScreenFrame(
       title: widget.embeddedMissionTitle ?? 'Terminal',
+      hideAppBarWithKeyboard: true,
       actions: [
         IconButton(
           tooltip: 'Copier la session',
@@ -152,150 +153,171 @@ class _TerminalScreenState extends State<TerminalScreen> {
     );
   }
 
-  Widget _terminal(VirtualRepository repository) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF080D18),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFF27334B)),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          color: const Color(0xFF111827),
-          child: Row(
-            children: [
-              for (final color in [
-                const Color(0xFFEF4444),
-                const Color(0xFFF59E0B),
-                const Color(0xFF22C55E),
-              ])
-                Container(
-                  width: 11,
-                  height: 11,
-                  margin: const EdgeInsets.only(right: 7),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '${repository.name} — ${repository.currentBranch}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Aide',
-                color: Colors.white70,
-                onPressed: () {
-                  input.text = 'help';
-                  execute();
-                },
-                icon: const Icon(Icons.help_outline_rounded, size: 20),
-              ),
-            ],
+  Widget _terminal(VirtualRepository repository) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactInput =
+            MediaQuery.orientationOf(context) == Orientation.landscape &&
+            (constraints.maxHeight < 240 ||
+                MediaQuery.viewInsetsOf(context).bottom > 0);
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF080D18),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF27334B)),
           ),
-        ),
-        Expanded(
-          child: entries.isEmpty
-              ? const _TerminalWelcome()
-              : ListView.builder(
-                  controller: scroll,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: entries.length,
-                  itemBuilder: (context, index) =>
-                      _EntryView(entry: entries[index]),
-                ),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-          child: Row(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            verticalDirection: compactInput
+                ? VerticalDirection.up
+                : VerticalDirection.down,
             children: [
-              for (final suggestion in suggestions)
-                Padding(
-                  padding: const EdgeInsets.only(right: 7),
-                  child: ActionChip(
-                    backgroundColor: const Color(0xFF1D263D),
-                    side: BorderSide.none,
-                    label: Text(
-                      suggestion,
-                      style: const TextStyle(
-                        color: Color(0xFFCBD5E1),
+              if (!compactInput)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
+                  color: const Color(0xFF111827),
+                  child: Row(
+                    children: [
+                      for (final color in [
+                        const Color(0xFFEF4444),
+                        const Color(0xFFF59E0B),
+                        const Color(0xFF22C55E),
+                      ])
+                        Container(
+                          width: 11,
+                          height: 11,
+                          margin: const EdgeInsets.only(right: 7),
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${repository.name} — ${repository.currentBranch}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Aide',
+                        color: Colors.white70,
+                        onPressed: () {
+                          input.text = 'help';
+                          execute();
+                        },
+                        icon: const Icon(Icons.help_outline_rounded, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: entries.isEmpty
+                    ? const _TerminalWelcome()
+                    : ListView.builder(
+                        controller: scroll,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: entries.length,
+                        itemBuilder: (context, index) =>
+                            _EntryView(entry: entries[index]),
+                      ),
+              ),
+              if (!compactInput)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                  child: Row(
+                    children: [
+                      for (final suggestion in suggestions)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 7),
+                          child: ActionChip(
+                            backgroundColor: const Color(0xFF1D263D),
+                            side: BorderSide.none,
+                            label: Text(
+                              suggestion,
+                              style: const TextStyle(
+                                color: Color(0xFFCBD5E1),
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            onPressed: () => useSuggestion(suggestion),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(15, 8, 10, 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF111827),
+                  border: Border(top: BorderSide(color: Color(0xFF27334B))),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      r'$',
+                      style: TextStyle(
+                        color: AppColors.green,
                         fontFamily: 'monospace',
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: () => useSuggestion(suggestion),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(15, 8, 10, 10),
-          decoration: const BoxDecoration(
-            color: Color(0xFF111827),
-            border: Border(top: BorderSide(color: Color(0xFF27334B))),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Text(
-                r'$',
-                style: TextStyle(
-                  color: AppColors.green,
-                  fontFamily: 'monospace',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.arrowUp):
-                        _previousCommand,
-                    const SingleActivator(LogicalKeyboardKey.arrowDown):
-                        _nextCommand,
-                  },
-                  child: TextField(
-                    controller: input,
-                    focusNode: focusNode,
-                    autofocus: true,
-                    onSubmitted: (_) => execute(),
-                    style: const TextStyle(
-                      color: Color(0xFFF8FAFC),
-                      fontFamily: 'monospace',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CallbackShortcuts(
+                        bindings: {
+                          const SingleActivator(LogicalKeyboardKey.arrowUp):
+                              _previousCommand,
+                          const SingleActivator(LogicalKeyboardKey.arrowDown):
+                              _nextCommand,
+                        },
+                        child: TextField(
+                          controller: input,
+                          focusNode: focusNode,
+                          autofocus: true,
+                          onSubmitted: (_) => execute(),
+                          style: const TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontFamily: 'monospace',
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            filled: false,
+                            hintText: 'git status',
+                            hintStyle: TextStyle(color: Color(0xFF64748B)),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
                     ),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      filled: false,
-                      hintText: 'git status',
-                      hintStyle: TextStyle(color: Color(0xFF64748B)),
-                      border: InputBorder.none,
+                    IconButton(
+                      tooltip: 'Exécuter',
+                      onPressed: execute,
+                      color: AppColors.green,
+                      icon: const Icon(
+                        Icons.arrow_circle_right_rounded,
+                        size: 30,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-              IconButton(
-                tooltip: 'Exécuter',
-                onPressed: execute,
-                color: AppColors.green,
-                icon: const Icon(Icons.arrow_circle_right_rounded, size: 30),
               ),
             ],
           ),
-        ),
-      ],
-    ),
-  );
+        );
+      },
+    );
+  }
 
   void _previousCommand() {
     final history = AppScope.of(context).repository.commandHistory;

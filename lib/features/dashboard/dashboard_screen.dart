@@ -4,6 +4,7 @@ import '../../app/app_scope.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/widgets/quest_widgets.dart';
 import '../../data/seed/learning_content.dart';
+import '../collaboration/presentation/collaboration_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({required this.onNavigate, super.key});
@@ -222,6 +223,17 @@ class DashboardScreen extends StatelessWidget {
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const _QuickHelp(),
+                        ),
+                      ),
+                    ),
+                    _Shortcut(
+                      icon: Icons.hub_rounded,
+                      title: 'GitHub Lab',
+                      subtitle: 'Issues et pull requests',
+                      color: AppColors.orange,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const CollaborationScreen(),
                         ),
                       ),
                     ),

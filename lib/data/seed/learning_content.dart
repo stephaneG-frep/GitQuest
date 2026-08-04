@@ -443,4 +443,22 @@ const achievements = <Achievement>[
     'Terminer cinq leçons',
     Icons.rocket_launch_rounded,
   ),
+  Achievement(
+    'issue_author',
+    'Organisateur',
+    'Créer une issue pédagogique',
+    Icons.adjust_rounded,
+  ),
+  Achievement(
+    'reviewer',
+    'Relecteur de code',
+    'Effectuer une revue de pull request',
+    Icons.rate_review_rounded,
+  ),
+  Achievement(
+    'collaborator',
+    'Collaborateur',
+    'Ouvrir une pull request',
+    Icons.groups_rounded,
+  ),
 ];
