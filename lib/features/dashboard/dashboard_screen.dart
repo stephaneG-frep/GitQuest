@@ -5,6 +5,8 @@ import '../../app/theme/app_theme.dart';
 import '../../core/widgets/quest_widgets.dart';
 import '../../data/seed/learning_content.dart';
 import '../collaboration/presentation/collaboration_screen.dart';
+import '../projects/data/project_content.dart';
+import '../projects/presentation/projects_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({required this.onNavigate, super.key});
@@ -196,6 +198,90 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         ),
                 ),
+                const AppSectionHeader('Projet en cours'),
+                ListenableBuilder(
+                  listenable: AppScope.of(context).projectProgressStore,
+                  builder: (context, _) {
+                    final completed = AppScope.of(
+                      context,
+                    ).projectProgressStore.completedSteps;
+                    final activeProject = projects
+                        .where(
+                          (project) => !project.steps.every(
+                            (step) => completed.contains(step.id),
+                          ),
+                        )
+                        .firstOrNull;
+                    final nextStep = activeProject?.steps
+                        .where((step) => !completed.contains(step.id))
+                        .firstOrNull;
+                    final completedProjects = projects
+                        .where(
+                          (project) => project.steps.every(
+                            (step) => completed.contains(step.id),
+                          ),
+                        )
+                        .length;
+                    return QuestCard(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ProjectsScreen(),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppColors.violet.withValues(alpha: .14),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              activeProject == null
+                                  ? Icons.emoji_events_rounded
+                                  : Icons.map_rounded,
+                              color: activeProject == null
+                                  ? AppColors.orange
+                                  : AppColors.violet,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activeProject?.title ??
+                                      'Tous les projets sont terminés !',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  nextStep == null
+                                      ? '$completedProjects / ${projects.length} projets accomplis'
+                                      : 'Prochaine étape : ${nextStep.title}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded),
+                        ],
+                      ),
+                    );
+                  },
+                ),
                 const AppSectionHeader('Raccourcis'),
                 Wrap(
                   spacing: 12,
@@ -234,6 +320,17 @@ class DashboardScreen extends StatelessWidget {
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const CollaborationScreen(),
+                        ),
+                      ),
+                    ),
+                    _Shortcut(
+                      icon: Icons.map_rounded,
+                      title: 'Projets',
+                      subtitle: 'Construire de bout en bout',
+                      color: AppColors.violet,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ProjectsScreen(),
                         ),
                       ),
                     ),

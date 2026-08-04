@@ -4,6 +4,8 @@ import 'package:gitquest/app/app.dart';
 import 'package:gitquest/app/app_scope.dart';
 import 'package:gitquest/core/storage/local_progress_store.dart';
 import 'package:gitquest/features/profile/profile_screen.dart';
+import 'package:gitquest/features/projects/data/project_progress_store.dart';
+import 'package:gitquest/features/projects/presentation/projects_screen.dart';
 import 'package:gitquest/features/collaboration/data/collaboration_store.dart';
 import 'package:gitquest/features/collaboration/presentation/collaboration_screen.dart';
 import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
@@ -46,6 +48,7 @@ void main() {
         repository: repository,
         engine: GitCommandEngine(repository),
         collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
         child: const MaterialApp(home: ProfileScreen()),
       ),
     );
@@ -72,6 +75,7 @@ void main() {
         repository: repository,
         engine: GitCommandEngine(repository),
         collaborationStore: collaboration,
+        projectProgressStore: ProjectProgressStore(),
         child: const MaterialApp(home: CollaborationScreen()),
       ),
     );
@@ -101,6 +105,7 @@ void main() {
         repository: repository,
         engine: GitCommandEngine(repository),
         collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
         child: const MaterialApp(
           home: MediaQuery(
             data: MediaQueryData(
@@ -134,6 +139,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Exécuter'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('les projets restent lisibles sur le Honor', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+    final repository = VirtualRepository();
+
+    await tester.pumpWidget(
+      AppScope(
+        store: store,
+        repository: repository,
+        engine: GitCommandEngine(repository),
+        collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
+        child: const MaterialApp(home: ProjectsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Portfolio personnel'), findsOneWidget);
+    expect(find.text('Application Flutter collaborative'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

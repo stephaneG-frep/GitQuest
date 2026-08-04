@@ -213,7 +213,7 @@ class SettingsScreen extends StatelessWidget {
           builder: (context) => AlertDialog(
             title: const Text('Tout recommencer ?'),
             content: const Text(
-              'Cette opération efface le profil, l’XP, les leçons, les missions et les badges. Exporte d’abord une sauvegarde si nécessaire.',
+              'Cette opération efface le profil, l’XP, les leçons, les missions, les projets et les badges. Exporte d’abord une sauvegarde si nécessaire.',
             ),
             actions: [
               TextButton(
@@ -228,7 +228,10 @@ class SettingsScreen extends StatelessWidget {
           ),
         ) ??
         false;
-    if (confirmed) await store.reset();
+    if (confirmed) {
+      await AppScope.of(context).projectProgressStore.clear();
+      await store.reset();
+    }
   }
 }
 

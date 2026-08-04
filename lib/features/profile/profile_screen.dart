@@ -5,6 +5,7 @@ import '../../app/home_shell.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/widgets/quest_widgets.dart';
 import '../../data/seed/learning_content.dart';
+import '../projects/data/project_content.dart';
 import '../settings/settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -66,35 +67,53 @@ class ProfileScreen extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth <= 650;
-              return GridView.count(
-                crossAxisCount: compact ? 2 : 4,
-                mainAxisExtent: compact ? 124 : 116,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _Stat(
-                    Icons.menu_book_rounded,
-                    '${store.completedLessons.length}',
-                    'Leçons',
-                  ),
-                  _Stat(
-                    Icons.flag_rounded,
-                    '${store.completedMissions.length}',
-                    'Missions',
-                  ),
-                  _Stat(
-                    Icons.local_fire_department_rounded,
-                    '${store.streak}',
-                    'Série',
-                  ),
-                  _Stat(
-                    Icons.terminal_rounded,
-                    '${AppScope.of(context).repository.commandHistory.length}',
-                    'Commandes',
-                  ),
-                ],
+              final progress = AppScope.of(context).projectProgressStore;
+              return ListenableBuilder(
+                listenable: progress,
+                builder: (context, _) {
+                  final completedProjects = projects
+                      .where(
+                        (project) => project.steps.every(
+                          (step) => progress.completedSteps.contains(step.id),
+                        ),
+                      )
+                      .length;
+                  return GridView.count(
+                    crossAxisCount: compact ? 2 : 5,
+                    mainAxisExtent: compact ? 124 : 116,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _Stat(
+                        Icons.menu_book_rounded,
+                        '${store.completedLessons.length}',
+                        'Leçons',
+                      ),
+                      _Stat(
+                        Icons.flag_rounded,
+                        '${store.completedMissions.length}',
+                        'Missions',
+                      ),
+                      _Stat(
+                        Icons.map_rounded,
+                        '$completedProjects / ${projects.length}',
+                        'Projets',
+                      ),
+                      _Stat(
+                        Icons.local_fire_department_rounded,
+                        '${store.streak}',
+                        'Série',
+                      ),
+                      _Stat(
+                        Icons.terminal_rounded,
+                        '${AppScope.of(context).repository.commandHistory.length}',
+                        'Commandes',
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),

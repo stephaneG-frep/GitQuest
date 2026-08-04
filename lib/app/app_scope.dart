@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/storage/local_progress_store.dart';
 import '../features/collaboration/data/collaboration_store.dart';
+import '../features/projects/data/project_progress_store.dart';
 import '../features/terminal/domain/git_command_engine.dart';
 import '../features/terminal/domain/virtual_repository.dart';
 
@@ -11,6 +12,7 @@ class AppScope extends InheritedWidget {
     required this.repository,
     required this.engine,
     required this.collaborationStore,
+    required this.projectProgressStore,
     required super.child,
     super.key,
   });
@@ -19,6 +21,7 @@ class AppScope extends InheritedWidget {
   final VirtualRepository repository;
   final GitCommandEngine engine;
   final CollaborationStore collaborationStore;
+  final ProjectProgressStore projectProgressStore;
 
   static AppScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
@@ -30,5 +33,6 @@ class AppScope extends InheritedWidget {
   bool updateShouldNotify(AppScope oldWidget) =>
       store != oldWidget.store ||
       repository != oldWidget.repository ||
-      collaborationStore != oldWidget.collaborationStore;
+      collaborationStore != oldWidget.collaborationStore ||
+      projectProgressStore != oldWidget.projectProgressStore;
 }

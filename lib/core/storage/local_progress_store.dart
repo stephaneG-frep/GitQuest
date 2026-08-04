@@ -19,6 +19,7 @@ class LocalProgressStore extends ChangeNotifier {
   final Set<String> completedMissions = <String>{};
   final Set<String> unlockedAchievements = <String>{};
   final Set<String> favoriteCommands = <String>{};
+  final Set<String> rewardedEvents = <String>{};
 
   Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
@@ -47,6 +48,7 @@ class LocalProgressStore extends ChangeNotifier {
       'completedMissions': completedMissions.toList(),
       'achievements': unlockedAchievements.toList(),
       'favorites': favoriteCommands.toList(),
+      'rewardedEvents': rewardedEvents.toList(),
     },
   };
 
@@ -89,6 +91,7 @@ class LocalProgressStore extends ChangeNotifier {
     _replace(completedMissions, progress['completedMissions']);
     _replace(unlockedAchievements, progress['achievements']);
     _replace(favoriteCommands, progress['favorites']);
+    _replace(rewardedEvents, progress['rewardedEvents']);
   }
 
   void _replace(Set<String> target, Object? values) {
@@ -134,6 +137,13 @@ class LocalProgressStore extends ChangeNotifier {
     if (unlockedAchievements.add(id)) await _changed();
   }
 
+  Future<void> rewardEvent(String eventId, int amount) async {
+    if (rewardedEvents.add(eventId)) {
+      xp += amount;
+      await _changed();
+    }
+  }
+
   Future<void> updateTheme(ThemePreference value) async {
     themePreference = value;
     await _changed();
@@ -168,6 +178,7 @@ class LocalProgressStore extends ChangeNotifier {
     completedMissions.clear();
     unlockedAchievements.clear();
     favoriteCommands.clear();
+    rewardedEvents.clear();
     await _changed();
   }
 

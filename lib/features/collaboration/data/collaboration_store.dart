@@ -37,6 +37,9 @@ class CollaborationStore extends ChangeNotifier {
       _nextPullRequestId =
           json['nextPullRequestId'] as int? ?? pullRequests.length + 1;
     } on Object {
+    } on Object catch (e, s) {
+      // En production, vous pourriez utiliser un service de logging (ex: Sentry, Firebase Crashlytics)
+      debugPrint('Erreur de chargement du CollaborationStore: $e\n$s');
       issues.clear();
       pullRequests.clear();
       _seed();

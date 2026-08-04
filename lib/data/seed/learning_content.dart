@@ -461,4 +461,10 @@ const achievements = <Achievement>[
     'Ouvrir une pull request',
     Icons.groups_rounded,
   ),
+  Achievement(
+    'project_complete',
+    'Projet terminé',
+    'Terminer un projet fil rouge',
+    Icons.emoji_events_rounded,
+  ),
 ];
