@@ -11,6 +11,7 @@ import 'package:gitquest/features/collaboration/presentation/collaboration_scree
 import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
 import 'package:gitquest/features/terminal/domain/virtual_repository.dart';
 import 'package:gitquest/features/terminal/presentation/terminal_screen.dart';
+import 'package:gitquest/features/tools/presentation/tools_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -165,6 +166,35 @@ void main() {
 
     expect(find.text('Portfolio personnel'), findsOneWidget);
     expect(find.text('Application Flutter collaborative'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('la boîte à outils reste utilisable sur le Honor', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+    final repository = VirtualRepository();
+
+    await tester.pumpWidget(
+      AppScope(
+        store: store,
+        repository: repository,
+        engine: GitCommandEngine(repository),
+        collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
+        child: const MaterialApp(home: ToolsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Boîte à outils Git'), findsOneWidget);
+    expect(find.text('Assistant'), findsOneWidget);
+    expect(find.text('Créer un nouveau dépôt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

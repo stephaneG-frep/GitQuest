@@ -36,9 +36,8 @@ class CollaborationStore extends ChangeNotifier {
       _nextIssueId = json['nextIssueId'] as int? ?? issues.length + 1;
       _nextPullRequestId =
           json['nextPullRequestId'] as int? ?? pullRequests.length + 1;
-    } on Object {
     } on Object catch (e, s) {
-      // En production, vous pourriez utiliser un service de logging (ex: Sentry, Firebase Crashlytics)
+      // Invalid local data is replaced with the initial GitHub Lab content.
       debugPrint('Erreur de chargement du CollaborationStore: $e\n$s');
       issues.clear();
       pullRequests.clear();

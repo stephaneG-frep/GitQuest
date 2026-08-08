@@ -207,6 +207,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _reset(BuildContext context, LocalProgressStore store) async {
+    final projectProgressStore = AppScope.of(context).projectProgressStore;
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -229,7 +230,7 @@ class SettingsScreen extends StatelessWidget {
         ) ??
         false;
     if (confirmed) {
-      await AppScope.of(context).projectProgressStore.clear();
+      await projectProgressStore.clear();
       await store.reset();
     }
   }

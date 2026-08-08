@@ -18,6 +18,7 @@ GitQuest est une application Flutter pédagogique, locale et ludique pour appren
 - GitHub Lab local avec dépôt distant, issues, pull requests, revues, commentaires et releases ;
 - fusion des pull requests connectée au véritable moteur Git virtuel ;
 - 3 projets fil rouge connectant le terminal, le dépôt virtuel et GitHub Lab ;
+- assistant de commandes, aide-mémoire filtrable et glossaire de 30 notions ;
 - 12 badges, aide-mémoire et profil ;
 - export/import JSON versionné ;
 - stockage local avec `SharedPreferences` ;
@@ -75,6 +76,7 @@ lib/
     ├── profile/
     ├── projects/               # projets fil rouge et validation réelle
     ├── settings/
+    ├── tools/                  # assistant, commandes et glossaire
     └── terminal/
         ├── domain/         # dépôt virtuel et interpréteur testable
         └── presentation/

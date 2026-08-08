@@ -7,6 +7,7 @@ import '../../data/seed/learning_content.dart';
 import '../collaboration/presentation/collaboration_screen.dart';
 import '../projects/data/project_content.dart';
 import '../projects/presentation/projects_screen.dart';
+import '../tools/presentation/tools_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({required this.onNavigate, super.key});
@@ -31,10 +32,12 @@ class DashboardScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Aide-mémoire',
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute<void>(builder: (_) => const _QuickHelp())),
+            tooltip: 'Boîte à outils Git',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ToolsScreen(initialIndex: 1),
+              ),
+            ),
             icon: const Icon(Icons.menu_book_rounded),
           ),
           const SizedBox(width: 8),
@@ -302,13 +305,13 @@ class DashboardScreen extends StatelessWidget {
                       onTap: () => onNavigate(3),
                     ),
                     _Shortcut(
-                      icon: Icons.menu_book_rounded,
-                      title: 'Aide-mémoire',
-                      subtitle: 'Trouver une commande',
+                      icon: Icons.auto_awesome_rounded,
+                      title: 'Boîte à outils',
+                      subtitle: 'Assistant, commandes et glossaire',
                       color: AppColors.blue,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const _QuickHelp(),
+                          builder: (_) => const ToolsScreen(),
                         ),
                       ),
                     ),
@@ -442,85 +445,6 @@ class _Shortcut extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _QuickHelp extends StatefulWidget {
-  const _QuickHelp();
-  @override
-  State<_QuickHelp> createState() => _QuickHelpState();
-}
-
-class _QuickHelpState extends State<_QuickHelp> {
-  String query = '';
-  static const commands = <(String, String)>[
-    ('git init', 'Initialiser un dépôt'),
-    ('git status', 'Voir l’état des fichiers'),
-    ('git add .', 'Tout placer dans le staging'),
-    ('git commit -m "Message"', 'Créer un commit'),
-    ('git log --oneline', 'Afficher l’historique compact'),
-    ('git diff', 'Voir les différences'),
-    ('git switch -c branche', 'Créer et activer une branche'),
-    ('git merge branche', 'Fusionner une branche'),
-    (
-      'git checkout --ours fichier',
-      'Garder la version actuelle pendant un conflit',
-    ),
-    (
-      'git checkout --theirs fichier',
-      'Garder la version entrante pendant un conflit',
-    ),
-    ('git restore fichier', 'Restaurer un fichier'),
-    ('git commit --amend -m "Message"', 'Corriger le dernier commit'),
-    ('git reset --soft HEAD~1', 'Retirer un commit sans perdre les fichiers'),
-    ('git revert HEAD', 'Annuler proprement un commit partagé'),
-    ('git stash', 'Mettre le travail de côté'),
-    ('git tag v1.0.0', 'Marquer une version'),
-    ('git reflog', 'Retrouver les déplacements de HEAD'),
-    ('git cherry-pick identifiant', 'Rejouer un commit ciblé'),
-    ('git rebase main', 'Rejouer sa branche au-dessus de main'),
-    ('git remote -v', 'Lister les dépôts distants'),
-    ('git push -u origin main', 'Publier la branche main'),
-  ];
-  @override
-  Widget build(BuildContext context) {
-    final filtered = commands
-        .where(
-          (item) => '${item.$1} ${item.$2}'.toLowerCase().contains(
-            query.toLowerCase(),
-          ),
-        )
-        .toList();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Aide-mémoire Git')),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          TextField(
-            onChanged: (value) => setState(() => query = value),
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search_rounded),
-              hintText: 'Commande ou intention…',
-            ),
-          ),
-          const SizedBox(height: 14),
-          for (final command in filtered)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.terminal_rounded),
-                title: SelectableText(
-                  command.$1,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(command.$2),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 extension FirstOrNull<T> on Iterable<T> {
