@@ -335,6 +335,56 @@ class VirtualRepository {
     return repository;
   }
 
+  void restoreFromJson(Map<String, dynamic> json) {
+    final restored = VirtualRepository.fromJson(json);
+    initialized = restored.initialized;
+    currentBranch = restored.currentBranch;
+    files
+      ..clear()
+      ..addAll(restored.files);
+    stagedFiles
+      ..clear()
+      ..addAll(restored.stagedFiles);
+    commits
+      ..clear()
+      ..addAll(restored.commits);
+    branches
+      ..clear()
+      ..addAll(restored.branches);
+    remotes
+      ..clear()
+      ..addAll(restored.remotes);
+    tags
+      ..clear()
+      ..addAll(restored.tags);
+    mergedBranches
+      ..clear()
+      ..addAll(restored.mergedBranches);
+    stashes
+      ..clear()
+      ..addAll(restored.stashes);
+    commandHistory
+      ..clear()
+      ..addAll(restored.commandHistory);
+    successfulCommands = restored.successfulCommands;
+    commandErrors = restored.commandErrors;
+    correctedErrors = restored.correctedErrors;
+    pendingCommandErrors
+      ..clear()
+      ..addAll(restored.pendingCommandErrors);
+    dailyCommands
+      ..clear()
+      ..addAll(restored.dailyCommands);
+    reflog
+      ..clear()
+      ..addAll(restored.reflog);
+    conflicts
+      ..clear()
+      ..addAll(restored.conflicts);
+    pendingMergeBranch = restored.pendingMergeBranch;
+    _commitSequence = restored._commitSequence;
+  }
+
   void reset() {
     initialized = false;
     currentBranch = 'main';

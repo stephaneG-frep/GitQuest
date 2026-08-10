@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../app/app_scope.dart';
+import '../../core/backup/backup_service.dart';
 import '../../core/storage/local_progress_store.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -74,15 +79,29 @@ class SettingsScreen extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.upload_file_rounded),
-                title: const Text('Exporter la progression'),
-                subtitle: const Text('Copier une sauvegarde JSON versionnée'),
-                onTap: () => _export(context, store),
+                title: const Text('Partager une sauvegarde complète'),
+                subtitle: const Text(
+                  'Profil, dépôt, GitHub Lab et projets dans un fichier',
+                ),
+                onTap: () => _export(context),
               ),
               ListTile(
                 leading: const Icon(Icons.download_rounded),
-                title: const Text('Importer une progression'),
-                subtitle: const Text('Coller une sauvegarde GitQuest'),
-                onTap: () => _import(context, store),
+                title: const Text('Importer un fichier .gitquest'),
+                subtitle: const Text('Vérifier puis fusionner ou remplacer'),
+                onTap: () => _importFile(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.content_paste_rounded),
+                title: const Text('Coller une ancienne sauvegarde'),
+                subtitle: const Text('Compatible avec le JSON de la version 1'),
+                onTap: () => _importPastedJson(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.restore_rounded),
+                title: const Text('Annuler le dernier remplacement'),
+                subtitle: const Text('Restaurer la sauvegarde automatique'),
+                onTap: () => _restoreAutomaticBackup(context),
               ),
               ListTile(
                 leading: Icon(
@@ -142,28 +161,88 @@ class SettingsScreen extends StatelessWidget {
     if (value != null) await store.updateName(value);
   }
 
-  Future<void> _export(BuildContext context, LocalProgressStore store) async {
-    final data = store.exportJson();
-    await Clipboard.setData(ClipboardData(text: data));
-    if (!context.mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sauvegarde copiée'),
-        content: const Text(
-          'Le JSON GitQuest versionné est dans le presse-papiers. Enregistre-le dans un fichier .gitquest pour le conserver.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Compris'),
-          ),
-        ],
-      ),
+  BackupService _backupService(BuildContext context) {
+    final scope = AppScope.of(context);
+    return BackupService(
+      profile: scope.store,
+      repository: scope.repository,
+      collaboration: scope.collaborationStore,
+      projects: scope.projectProgressStore,
     );
   }
 
-  Future<void> _import(BuildContext context, LocalProgressStore store) async {
+  Future<void> _export(BuildContext context) async {
+    final data = _backupService(context).exportJson();
+    final now = DateTime.now();
+    final fileName =
+        'gitquest-${now.year}-${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}.gitquest';
+    await Clipboard.setData(ClipboardData(text: data));
+    if (!context.mounted) return;
+    final renderObject = context.findRenderObject();
+    final renderBox = renderObject is RenderBox ? renderObject : null;
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          title: 'Sauvegarde GitQuest',
+          subject: 'Ma sauvegarde GitQuest',
+          text: 'Sauvegarde complète GitQuest',
+          files: <XFile>[
+            XFile.fromData(
+              Uint8List.fromList(utf8.encode(data)),
+              mimeType: 'application/json',
+            ),
+          ],
+          fileNameOverrides: <String>[fileName],
+          sharePositionOrigin: renderBox == null
+              ? null
+              : renderBox.localToGlobal(Offset.zero) & renderBox.size,
+        ),
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sauvegarde créée. Une copie JSON est aussi dans le presse-papiers.',
+          ),
+        ),
+      );
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Le partage n’est pas disponible, mais le JSON a été copié.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importFile(BuildContext context) async {
+    const typeGroup = XTypeGroup(
+      label: 'Sauvegarde GitQuest',
+      extensions: <String>['gitquest', 'json'],
+      mimeTypes: <String>['application/json', 'text/plain'],
+      uniformTypeIdentifiers: <String>['public.json', 'public.data'],
+      webWildCards: <String>['application/json', 'text/plain'],
+    );
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: const <XTypeGroup>[typeGroup],
+        confirmButtonText: 'Importer',
+      );
+      if (file == null || !context.mounted) return;
+      final raw = await file.readAsString();
+      if (!context.mounted) return;
+      await _previewAndImport(context, raw);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      _showImportError(context, error);
+    }
+  }
+
+  Future<void> _importPastedJson(BuildContext context) async {
     final controller = TextEditingController();
     final raw = await showDialog<String>(
       context: context,
@@ -194,14 +273,124 @@ class SettingsScreen extends StatelessWidget {
     );
     controller.dispose();
     if (raw == null || !context.mounted) return;
-    final error = await store.importJson(raw);
+    await _previewAndImport(context, raw);
+  }
+
+  Future<void> _restoreAutomaticBackup(BuildContext context) async {
+    try {
+      final backup = await _backupService(context).loadAutomaticBackup();
+      if (!context.mounted) return;
+      if (backup == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucune sauvegarde automatique disponible.'),
+          ),
+        );
+        return;
+      }
+      await _showPreview(context, backup);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      _showImportError(context, error);
+    }
+  }
+
+  Future<void> _previewAndImport(BuildContext context, String raw) async {
+    try {
+      final backup = _backupService(context).parse(raw);
+      await _showPreview(context, backup);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      _showImportError(context, error);
+    }
+  }
+
+  Future<void> _showPreview(BuildContext context, ParsedBackup backup) async {
+    final preview = backup.preview;
+    final mode = await showDialog<BackupImportMode>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vérifier la sauvegarde'),
+        content: SingleChildScrollView(
+          child: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${preview.name} • ${preview.xp} XP',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _PreviewChip('${preview.lessons} leçons'),
+                    _PreviewChip('${preview.missions} missions'),
+                    _PreviewChip('${preview.commits} commits'),
+                    _PreviewChip('${preview.issues} issues'),
+                    _PreviewChip('${preview.pullRequests} PR'),
+                    _PreviewChip('${preview.projectSteps} étapes projet'),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  preview.isLegacy
+                      ? 'Ancien format : seul le profil et sa progression seront importés.'
+                      : 'Fusionner conserve le dépôt et GitHub Lab actuels, et réunit les progressions. Remplacer restaure tous les blocs du fichier.',
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Avant un remplacement, GitQuest crée automatiquement un point de retour.',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, BackupImportMode.merge),
+            child: const Text('Fusionner'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, BackupImportMode.replace),
+            child: const Text('Remplacer'),
+          ),
+        ],
+      ),
+    );
+    if (mode == null || !context.mounted) return;
+    await _backupService(context).import(backup, mode);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(error ?? 'Progression importée avec succès.'),
-        backgroundColor: error == null
-            ? Colors.green
-            : Theme.of(context).colorScheme.error,
+        content: Text(
+          mode == BackupImportMode.merge
+              ? 'Progressions fusionnées avec succès.'
+              : 'Sauvegarde complète restaurée avec succès.',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showImportError(BuildContext context, Object error) {
+    final message = error is FormatException
+        ? error.message
+        : 'Impossible de lire cette sauvegarde.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message.toString()),
+        backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
   }
@@ -234,6 +423,15 @@ class SettingsScreen extends StatelessWidget {
       await store.reset();
     }
   }
+}
+
+class _PreviewChip extends StatelessWidget {
+  const _PreviewChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Chip(label: Text(label));
 }
 
 class _Section extends StatelessWidget {

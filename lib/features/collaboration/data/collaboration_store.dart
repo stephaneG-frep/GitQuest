@@ -177,6 +177,29 @@ class CollaborationStore extends ChangeNotifier {
         .toList(),
   };
 
+  Future<void> restoreFromJson(Map<String, dynamic> json) async {
+    final restoredIssues = (json['issues'] as List<dynamic>? ?? <dynamic>[])
+        .map((value) => SimulatedIssue.fromJson(value as Map<String, dynamic>))
+        .toList();
+    final restoredPullRequests =
+        (json['pullRequests'] as List<dynamic>? ?? <dynamic>[])
+            .map(
+              (value) =>
+                  SimulatedPullRequest.fromJson(value as Map<String, dynamic>),
+            )
+            .toList();
+    issues
+      ..clear()
+      ..addAll(restoredIssues);
+    pullRequests
+      ..clear()
+      ..addAll(restoredPullRequests);
+    _nextIssueId = json['nextIssueId'] as int? ?? issues.length + 1;
+    _nextPullRequestId =
+        json['nextPullRequestId'] as int? ?? pullRequests.length + 1;
+    await _changed();
+  }
+
   Future<void> _changed() async {
     notifyListeners();
     final preferences = await SharedPreferences.getInstance();

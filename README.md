@@ -22,7 +22,7 @@ GitQuest est une application Flutter pédagogique, locale et ludique pour appren
 - statistiques locales avec activité sur sept jours, progression par thème et commandes favorites ;
 - recherche globale dans les leçons, missions, projets, commandes, définitions et erreurs fréquentes ;
 - 12 badges, aide-mémoire et profil ;
-- export/import JSON versionné ;
+- export/import complet dans un fichier `.gitquest` versionné avec aperçu et fusion ;
 - stockage local avec `SharedPreferences` ;
 - tests du moteur, des sauvegardes et de l’interface principale.
 
@@ -98,7 +98,7 @@ Ajouter un objet `Mission` dans `lib/data/seed/missions.dart`. Le validateur re�
 
 ## Sauvegardes
 
-L’export copie un JSON versionné qui peut être enregistré avec l’extension `.gitquest`. L’import vérifie actuellement `formatVersion: 1` avant de remplacer les données en mémoire et locales.
+L’export crée un fichier `.gitquest` versionné contenant le profil, le dépôt virtuel, GitHub Lab et les projets. L’import affiche un aperçu, propose la fusion ou le remplacement et conserve automatiquement un point de retour. Les anciens exports `formatVersion: 1` restent acceptés.
 
 ## Confidentialité
 
@@ -106,17 +106,15 @@ GitQuest ne nécessite ni compte ni backend. Aucune télémétrie ou publicité 
 
 ## Limites du MVP
 
-- export/import via presse-papiers, sans sélecteur de fichiers natif ;
 - rebase conflictuelle avec `--continue` et édition manuelle multi-fichiers sont prévues après stabilisation ;
 - la simulation GitHub ne couvre pas encore les protections de branche ni les actions CI détaillées ;
 - les niveaux 5 à 7 sont visibles mais leur contenu complet sera ajouté progressivement.
 
 ## Feuille de route
 
-1. Import de fichiers `.gitquest` avec sélection native et aperçu de fusion.
-2. Rebase conflictuelle complète et édition visuelle des conflits multi-fichiers.
-3. Étendre le catalogue à 40 leçons et 25 missions.
-4. Statistiques hebdomadaires et rappels locaux facultatifs.
+1. Rebase conflictuelle complète et édition visuelle des conflits multi-fichiers.
+2. Étendre le catalogue à 40 leçons et 25 missions.
+3. Rappels locaux facultatifs.
 
 ## Licence
 

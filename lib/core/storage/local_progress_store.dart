@@ -83,6 +83,51 @@ class LocalProgressStore extends ChangeNotifier {
     }
   }
 
+  Future<void> restoreFromJson(
+    Map<String, dynamic> data, {
+    bool merge = false,
+  }) async {
+    if (!merge) {
+      _readJson(data);
+    } else {
+      final imported = LocalProgressStore().._readJson(data);
+      xp = xp > imported.xp ? xp : imported.xp;
+      streak = streak > imported.streak ? streak : imported.streak;
+      bestStreak = bestStreak > imported.bestStreak
+          ? bestStreak
+          : imported.bestStreak;
+      onboardingComplete = onboardingComplete || imported.onboardingComplete;
+      completedLessons.addAll(imported.completedLessons);
+      completedMissions.addAll(imported.completedMissions);
+      unlockedAchievements.addAll(imported.unlockedAchievements);
+      favoriteCommands.addAll(imported.favoriteCommands);
+      rewardedEvents.addAll(imported.rewardedEvents);
+      for (final entry in imported.dailyActivity.entries) {
+        dailyActivity.update(
+          entry.key,
+          (value) => value > entry.value ? value : entry.value,
+          ifAbsent: () => entry.value,
+        );
+      }
+      for (final entry in imported.dailyXp.entries) {
+        dailyXp.update(
+          entry.key,
+          (value) => value > entry.value ? value : entry.value,
+          ifAbsent: () => entry.value,
+        );
+      }
+      for (final search in imported.recentSearches.reversed) {
+        recentSearches
+          ..remove(search)
+          ..insert(0, search);
+      }
+      if (recentSearches.length > 8) {
+        recentSearches.removeRange(8, recentSearches.length);
+      }
+    }
+    await _changed();
+  }
+
   void _readJson(Map<String, dynamic> data) {
     final profile =
         data['profile'] as Map<String, dynamic>? ?? <String, dynamic>{};

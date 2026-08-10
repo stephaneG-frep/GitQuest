@@ -24,6 +24,9 @@
 - Suivi persistant des commandes réussies, erreurs corrigées, activité quotidienne et XP journalier.
 - Ajout de la recherche globale avec résultats groupés et destinations directes.
 - Ajout d’un historique local des huit dernières recherches, effaçable depuis l’écran.
+- Export complet vers un fichier `.gitquest` partageable et import via le sélecteur natif.
+- Aperçu avant import, fusion de progression, remplacement complet et sauvegarde automatique de sécurité.
+- Compatibilité maintenue avec les anciennes sauvegardes JSON de format 1.
 
 ## 1.0.0 — 2026-08-03
 

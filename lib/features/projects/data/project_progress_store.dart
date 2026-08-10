@@ -38,4 +38,15 @@ class ProjectProgressStore extends ChangeNotifier {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_storageKey);
   }
+
+  Future<void> restore(Iterable<String> stepIds, {bool merge = false}) async {
+    if (!merge) completedSteps.clear();
+    completedSteps.addAll(stepIds);
+    notifyListeners();
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _storageKey,
+      jsonEncode(completedSteps.toList()),
+    );
+  }
 }

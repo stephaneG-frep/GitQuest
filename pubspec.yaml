@@ -7,8 +7,10 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  file_selector: ^1.1.0
   flutter:
     sdk: flutter
+  share_plus: ^13.3.0
   shared_preferences: ^2.5.3
 
 dev_dependencies:
