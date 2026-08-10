@@ -7,6 +7,7 @@ import '../../data/seed/learning_content.dart';
 import '../collaboration/presentation/collaboration_screen.dart';
 import '../projects/data/project_content.dart';
 import '../projects/presentation/projects_screen.dart';
+import '../search/presentation/global_search_screen.dart';
 import '../tools/presentation/tools_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -31,6 +32,15 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Recherche globale',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const GlobalSearchScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.search_rounded),
+          ),
           IconButton(
             tooltip: 'Boîte à outils Git',
             onPressed: () => Navigator.of(context).push(
@@ -312,6 +322,17 @@ class DashboardScreen extends StatelessWidget {
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const ToolsScreen(),
+                        ),
+                      ),
+                    ),
+                    _Shortcut(
+                      icon: Icons.travel_explore_rounded,
+                      title: 'Recherche',
+                      subtitle: 'Explorer tout GitQuest',
+                      color: AppColors.green,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const GlobalSearchScreen(),
                         ),
                       ),
                     ),

@@ -22,6 +22,8 @@
 - Ajout d’un glossaire pédagogique de 30 notions Git et GitHub.
 - Ajout des statistiques détaillées : activité hebdomadaire, séries, progression par thème et commandes fréquentes.
 - Suivi persistant des commandes réussies, erreurs corrigées, activité quotidienne et XP journalier.
+- Ajout de la recherche globale avec résultats groupés et destinations directes.
+- Ajout d’un historique local des huit dernières recherches, effaçable depuis l’écran.
 
 ## 1.0.0 — 2026-08-03
 

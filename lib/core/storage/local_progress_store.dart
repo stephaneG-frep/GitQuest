@@ -24,6 +24,7 @@ class LocalProgressStore extends ChangeNotifier {
   final Set<String> rewardedEvents = <String>{};
   final Map<String, int> dailyActivity = <String, int>{};
   final Map<String, int> dailyXp = <String, int>{};
+  final List<String> recentSearches = <String>[];
 
   Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
@@ -61,6 +62,7 @@ class LocalProgressStore extends ChangeNotifier {
       'rewardedEvents': rewardedEvents.toList(),
       'dailyActivity': dailyActivity,
       'dailyXp': dailyXp,
+      'recentSearches': recentSearches,
     },
   };
 
@@ -108,6 +110,7 @@ class LocalProgressStore extends ChangeNotifier {
     _replace(rewardedEvents, progress['rewardedEvents']);
     _replaceIntMap(dailyActivity, progress['dailyActivity']);
     _replaceIntMap(dailyXp, progress['dailyXp']);
+    _replaceList(recentSearches, progress['recentSearches']);
   }
 
   void _replace(Set<String> target, Object? values) {
@@ -123,6 +126,12 @@ class LocalProgressStore extends ChangeNotifier {
         map.map((key, value) => MapEntry(key, (value as num).toInt())),
       );
     }
+  }
+
+  void _replaceList(List<String> target, Object? values) {
+    target
+      ..clear()
+      ..addAll((values as List<dynamic>? ?? <dynamic>[]).whereType<String>());
   }
 
   Future<void> save() async {
@@ -194,6 +203,24 @@ class LocalProgressStore extends ChangeNotifier {
     await _changed();
   }
 
+  Future<void> rememberSearch(String query) async {
+    final value = query.trim();
+    if (value.isEmpty) return;
+    recentSearches
+      ..removeWhere((item) => item.toLowerCase() == value.toLowerCase())
+      ..insert(0, value);
+    if (recentSearches.length > 8) {
+      recentSearches.removeRange(8, recentSearches.length);
+    }
+    await _changed();
+  }
+
+  Future<void> clearRecentSearches() async {
+    if (recentSearches.isEmpty) return;
+    recentSearches.clear();
+    await _changed();
+  }
+
   Future<void> reset() async {
     name = 'Explorateur';
     onboardingComplete = false;
@@ -211,6 +238,7 @@ class LocalProgressStore extends ChangeNotifier {
     rewardedEvents.clear();
     dailyActivity.clear();
     dailyXp.clear();
+    recentSearches.clear();
     await _changed();
   }
 

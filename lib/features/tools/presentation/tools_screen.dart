@@ -7,9 +7,10 @@ import '../../../core/widgets/quest_widgets.dart';
 import '../data/tool_content.dart';
 
 class ToolsScreen extends StatefulWidget {
-  const ToolsScreen({this.initialIndex = 0, super.key});
+  const ToolsScreen({this.initialIndex = 0, this.initialQuery = '', super.key});
 
   final int initialIndex;
+  final String initialQuery;
 
   @override
   State<ToolsScreen> createState() => _ToolsScreenState();
@@ -20,6 +21,13 @@ class _ToolsScreenState extends State<ToolsScreen> {
   String query = '';
   String category = 'Toutes';
   bool favoritesOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    query = widget.initialQuery;
+    searchController.text = widget.initialQuery;
+  }
 
   @override
   void dispose() {

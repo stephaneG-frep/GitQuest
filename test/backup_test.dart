@@ -48,4 +48,25 @@ void main() {
       expect(restored.dailyXp, store.dailyXp);
     },
   );
+
+  test('conserve au plus huit recherches récentes sans doublon', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalProgressStore();
+
+    for (var index = 0; index < 10; index += 1) {
+      await store.rememberSearch('recherche $index');
+    }
+    await store.rememberSearch('recherche 5');
+
+    expect(store.recentSearches, hasLength(8));
+    expect(store.recentSearches.first, 'recherche 5');
+    expect(
+      store.recentSearches.where((item) => item == 'recherche 5'),
+      hasLength(1),
+    );
+
+    final restored = LocalProgressStore();
+    await restored.load();
+    expect(restored.recentSearches, store.recentSearches);
+  });
 }
