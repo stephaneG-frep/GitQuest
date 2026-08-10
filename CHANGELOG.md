@@ -27,6 +27,8 @@
 - Export complet vers un fichier `.gitquest` partageable et import via le sélecteur natif.
 - Aperçu avant import, fusion de progression, remplacement complet et sauvegarde automatique de sécurité.
 - Compatibilité maintenue avec les anciennes sauvegardes JSON de format 1.
+- Ajout du rebase conflictuel persistant avec `--continue` et `--abort`.
+- Ajout d’un résolveur visuel multi-fichiers avec choix des versions et édition libre.
 
 ## 1.0.0 — 2026-08-03
 

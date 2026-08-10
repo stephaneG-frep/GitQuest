@@ -55,4 +55,32 @@ void main() {
     expect(restored.conflicts, contains('README.md'));
     expect(restored.files['README.md']!.state, FileState.conflicted);
   });
+
+  test('conserve un rebase conflictuel en cours', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = VirtualRepositoryStore();
+    final repository = VirtualRepository();
+    final engine = GitCommandEngine(repository);
+    engine.execute('git init');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Base"');
+    engine.execute('git switch -c feature/docs');
+    engine.execute('echo "Feature" > README.md');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Feature"');
+    engine.execute('git switch main');
+    engine.execute('echo "Main" > README.md');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Main"');
+    engine.execute('git switch feature/docs');
+    engine.execute('git rebase main');
+
+    await store.save(repository);
+    final restored = await store.load();
+
+    expect(restored.pendingRebase, isNotNull);
+    expect(restored.pendingRebase!.targetBranch, 'main');
+    expect(restored.pendingRebase!.pendingCommitIds, isNotEmpty);
+    expect(restored.conflicts, contains('README.md'));
+  });
 }

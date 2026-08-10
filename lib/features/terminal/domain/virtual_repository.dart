@@ -60,6 +60,34 @@ class MergeConflict {
   );
 }
 
+class RebaseOperation {
+  RebaseOperation({
+    required this.originalHeadId,
+    required this.targetBranch,
+    required this.pendingCommitIds,
+  });
+
+  final String originalHeadId;
+  final String targetBranch;
+  final List<String> pendingCommitIds;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'originalHeadId': originalHeadId,
+    'targetBranch': targetBranch,
+    'pendingCommitIds': pendingCommitIds,
+  };
+
+  factory RebaseOperation.fromJson(Map<String, dynamic> json) =>
+      RebaseOperation(
+        originalHeadId: json['originalHeadId'] as String,
+        targetBranch: json['targetBranch'] as String,
+        pendingCommitIds:
+            (json['pendingCommitIds'] as List<dynamic>? ?? <dynamic>[])
+                .whereType<String>()
+                .toList(),
+      );
+}
+
 class VirtualRepository {
   VirtualRepository({this.name = 'atelier'}) {
     files['README.md'] = VirtualFile('README.md', '# Mon aventure GitQuest\n');
@@ -85,6 +113,7 @@ class VirtualRepository {
   final List<String> reflog = <String>[];
   final Map<String, MergeConflict> conflicts = <String, MergeConflict>{};
   String? pendingMergeBranch;
+  RebaseOperation? pendingRebase;
   int _commitSequence = 0;
 
   VirtualCommit createCommit(String message, {List<String>? parents}) {
@@ -194,6 +223,7 @@ class VirtualRepository {
     'dailyCommands': dailyCommands,
     'reflog': reflog,
     'pendingMergeBranch': pendingMergeBranch,
+    'pendingRebase': pendingRebase?.toJson(),
     'conflicts': conflicts.map(
       (path, conflict) => MapEntry(path, conflict.toJson()),
     ),
@@ -294,6 +324,9 @@ class VirtualRepository {
       (json['reflog'] as List<dynamic>? ?? <dynamic>[]).whereType<String>(),
     );
     repository.pendingMergeBranch = json['pendingMergeBranch'] as String?;
+    if (json['pendingRebase'] case final Map<String, dynamic> rebaseJson) {
+      repository.pendingRebase = RebaseOperation.fromJson(rebaseJson);
+    }
     final rawConflicts =
         json['conflicts'] as Map<String, dynamic>? ?? <String, dynamic>{};
     repository.conflicts.addAll(
@@ -382,6 +415,7 @@ class VirtualRepository {
       ..clear()
       ..addAll(restored.conflicts);
     pendingMergeBranch = restored.pendingMergeBranch;
+    pendingRebase = restored.pendingRebase;
     _commitSequence = restored._commitSequence;
   }
 
@@ -409,6 +443,7 @@ class VirtualRepository {
     reflog.clear();
     conflicts.clear();
     pendingMergeBranch = null;
+    pendingRebase = null;
     _commitSequence = 0;
   }
 }

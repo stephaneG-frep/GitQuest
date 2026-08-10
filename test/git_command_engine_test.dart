@@ -187,5 +187,88 @@ void main() {
       expect(repository.head!.parentIds, contains(mainHead));
       expect(repository.reflog.last, contains('rebase'));
     });
+
+    test('rebase conflictuel se résout puis continue', () {
+      engine.execute('git init');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Base"');
+      engine.execute('git switch -c feature/readme');
+      engine.execute('echo "Version feature" > README.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Évolue le guide"');
+      engine.execute('git switch main');
+      engine.execute('echo "Version main" > README.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Corrige le guide"');
+      final mainHead = repository.head!.id;
+      engine.execute('git switch feature/readme');
+
+      final paused = engine.execute('git rebase main');
+      expect(paused.type, TerminalOutputType.warning);
+      expect(repository.pendingRebase, isNotNull);
+      expect(repository.conflicts, contains('README.md'));
+
+      engine.execute('git checkout --theirs README.md');
+      engine.execute('git add README.md');
+      final continued = engine.execute('git rebase --continue');
+
+      expect(continued.isSuccess, isTrue);
+      expect(repository.pendingRebase, isNull);
+      expect(repository.conflicts, isEmpty);
+      expect(repository.files['README.md']!.content, 'Version feature');
+      expect(repository.head!.parentIds, contains(mainHead));
+      expect(repository.head!.message, 'Évolue le guide');
+    });
+
+    test('rebase conflictuel peut être annulé', () {
+      engine.execute('git init');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Base"');
+      engine.execute('git switch -c feature/theme');
+      engine.execute('echo "Feature" > README.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Feature"');
+      final originalHead = repository.head!.id;
+      engine.execute('git switch main');
+      engine.execute('echo "Main" > README.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Main"');
+      engine.execute('git switch feature/theme');
+      engine.execute('git rebase main');
+
+      final aborted = engine.execute('git rebase --abort');
+
+      expect(aborted.isSuccess, isTrue);
+      expect(repository.pendingRebase, isNull);
+      expect(repository.conflicts, isEmpty);
+      expect(repository.head!.id, originalHead);
+      expect(repository.files['README.md']!.content, 'Feature');
+    });
+
+    test('rebase expose plusieurs fichiers conflictuels', () {
+      engine.execute('git init');
+      engine.execute('touch guide.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Base"');
+      engine.execute('git switch -c feature/docs');
+      engine.execute('echo "Feature README" > README.md');
+      engine.execute('echo "Feature guide" > guide.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Documentation feature"');
+      engine.execute('git switch main');
+      engine.execute('echo "Main README" > README.md');
+      engine.execute('echo "Main guide" > guide.md');
+      engine.execute('git add .');
+      engine.execute('git commit -m "Documentation main"');
+      engine.execute('git switch feature/docs');
+
+      engine.execute('git rebase main');
+
+      expect(
+        repository.conflicts.keys,
+        containsAll(<String>['README.md', 'guide.md']),
+      );
+      expect(engine.execute('git rebase --continue').isSuccess, isFalse);
+    });
   });
 }

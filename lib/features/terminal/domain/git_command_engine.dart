@@ -21,6 +21,25 @@ class GitCommandEngine {
     onChanged?.call(repository);
   }
 
+  CommandResult editConflict(String path, String content) {
+    if (!repository.conflicts.containsKey(path)) {
+      return CommandResult(
+        '$path n’est pas en conflit.',
+        type: TerminalOutputType.error,
+      );
+    }
+    repository.files[path] = VirtualFile(
+      path,
+      content,
+      state: FileState.modified,
+    );
+    onChanged?.call(repository);
+    return CommandResult(
+      'Contenu personnalisé enregistré dans $path.\nVérifie-le, puis exécute git add $path.',
+      type: TerminalOutputType.success,
+    );
+  }
+
   CommandResult execute(String input) {
     final result = _execute(input);
     if (input.trim().isNotEmpty) {
@@ -243,6 +262,11 @@ Astuce : commence par git init, puis git status.''');
         '\nChemins non fusionnés :\n  U  ${conflicted.join('\n  U  ')}\n\nRésous chaque fichier, puis utilise git add.',
       );
     }
+    if (repository.pendingRebase != null) {
+      buffer.writeln(
+        '\nRebase en cours sur ${repository.pendingRebase!.targetBranch}.\nRésous et prépare les fichiers, puis utilise git rebase --continue.',
+      );
+    }
     if (modified.isNotEmpty) {
       buffer.writeln(
         '\nModifications non indexées :\n  M  ${modified.join('\n  M  ')}',
@@ -324,6 +348,12 @@ Astuce : commence par git init, puis git status.''');
     if (repository.conflicts.isNotEmpty) {
       return const CommandResult(
         'La fusion contient encore des conflits. Résous-les avant de créer le commit.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.pendingRebase != null) {
+      return const CommandResult(
+        'Un rebase est en cours. Utilise git rebase --continue après avoir préparé les fichiers, ou git rebase --abort.',
         type: TerminalOutputType.error,
       );
     }
@@ -458,9 +488,9 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.success,
       );
     }
-    if (repository.conflicts.isNotEmpty) {
+    if (repository.conflicts.isNotEmpty || repository.pendingRebase != null) {
       return const CommandResult(
-        'Termine ou annule la fusion avant de changer de branche.',
+        'Termine ou annule l’opération en cours avant de changer de branche.',
         type: TerminalOutputType.error,
       );
     }
@@ -513,6 +543,12 @@ Astuce : commence par git init, puis git status.''');
   CommandResult _merge(List<String> args) {
     final error = _requireRepository();
     if (error != null) return error;
+    if (repository.pendingRebase != null) {
+      return const CommandResult(
+        'Termine ou annule le rebase avant de lancer une fusion.',
+        type: TerminalOutputType.error,
+      );
+    }
     if (args.length >= 3 && args[2] == '--abort') {
       if (repository.pendingMergeBranch == null) {
         return const CommandResult(
@@ -721,6 +757,59 @@ Astuce : commence par git init, puis git status.''');
   CommandResult _rebase(List<String> args) {
     final error = _requireRepository();
     if (error != null) return error;
+    if (args.length >= 3 && args[2] == '--abort') {
+      final operation = repository.pendingRebase;
+      if (operation == null) {
+        return const CommandResult(
+          'Aucun rebase en cours à annuler.',
+          type: TerminalOutputType.warning,
+        );
+      }
+      final original = repository.commitByReference(operation.originalHeadId);
+      repository.branches[repository.currentBranch] = operation.originalHeadId;
+      repository.checkoutSnapshot(original?.snapshot ?? <String, String>{});
+      repository
+        ..conflicts.clear()
+        ..pendingRebase = null;
+      repository.reflog.add('${operation.originalHeadId} rebase: abort');
+      return const CommandResult(
+        'Rebase annulé. La branche et les fichiers ont retrouvé leur état initial.',
+        type: TerminalOutputType.success,
+      );
+    }
+    if (args.length >= 3 && args[2] == '--continue') {
+      final operation = repository.pendingRebase;
+      if (operation == null) {
+        return const CommandResult(
+          'Aucun rebase en cours à continuer.',
+          type: TerminalOutputType.warning,
+        );
+      }
+      if (repository.conflicts.isNotEmpty) {
+        return CommandResult(
+          'Il reste ${repository.conflicts.length} conflit(s). Choisis ou édite chaque contenu, puis utilise git add.',
+          type: TerminalOutputType.error,
+        );
+      }
+      if (repository.stagedFiles.isEmpty) {
+        return const CommandResult(
+          'Prépare les fichiers résolus avec git add avant de continuer.',
+          type: TerminalOutputType.error,
+        );
+      }
+      final original = repository.commitByReference(
+        operation.pendingCommitIds.first,
+      )!;
+      repository.createCommit(original.message);
+      operation.pendingCommitIds.removeAt(0);
+      return _replayRebase(operation);
+    }
+    if (repository.pendingRebase != null) {
+      return const CommandResult(
+        'Un rebase est déjà en cours. Utilise git rebase --continue ou git rebase --abort.',
+        type: TerminalOutputType.error,
+      );
+    }
     if (args.length < 3) {
       return const CommandResult(
         'Indique la branche de base : git rebase main',
@@ -767,25 +856,15 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.success,
       );
     }
-    final base = _commonAncestor(currentHeadId, targetHeadId);
-    final baseSnapshot = base?.snapshot ?? <String, String>{};
-    final currentHead = repository.commitByReference(currentHeadId)!;
-    final targetHead = repository.commitByReference(targetHeadId)!;
-    final ourChanges = _changesBetween(baseSnapshot, currentHead.snapshot);
-    final targetChanges = _changesBetween(baseSnapshot, targetHead.snapshot);
-    final conflicts = ourChanges
-        .where(
-          (path) =>
-              targetChanges.contains(path) &&
-              currentHead.snapshot[path] != targetHead.snapshot[path],
-        )
-        .toList();
-    if (conflicts.isNotEmpty) {
-      return CommandResult(
-        'Rebase arrêté avant toute modification : conflit possible dans ${conflicts.join(', ')}.\nRésous d’abord les changements divergents ou utilise une fusion.',
-        type: TerminalOutputType.warning,
+    if (_isAncestor(targetHeadId, currentHeadId)) {
+      return const CommandResult(
+        'La branche repose déjà sur cette base : aucun commit à rejouer.',
+        type: TerminalOutputType.success,
       );
     }
+    final base = _commonAncestor(currentHeadId, targetHeadId);
+    final currentHead = repository.commitByReference(currentHeadId)!;
+    final targetHead = repository.commitByReference(targetHeadId)!;
     final commitsToReplay = <VirtualCommit>[];
     var cursor = currentHead;
     while (cursor.id != base?.id) {
@@ -797,15 +876,37 @@ Astuce : commence par git init, puis git status.''');
     }
     repository.branches[repository.currentBranch] = targetHeadId;
     repository.checkoutSnapshot(targetHead.snapshot);
-    for (final original in commitsToReplay.reversed) {
+    final operation = RebaseOperation(
+      originalHeadId: currentHeadId,
+      targetBranch: targetBranch,
+      pendingCommitIds: commitsToReplay.reversed
+          .map((commit) => commit.id)
+          .toList(),
+    );
+    repository.pendingRebase = operation;
+    return _replayRebase(operation);
+  }
+
+  CommandResult _replayRebase(RebaseOperation operation) {
+    var replayed = 0;
+    while (operation.pendingCommitIds.isNotEmpty) {
+      final original = repository.commitByReference(
+        operation.pendingCommitIds.first,
+      )!;
       final parent = original.parentIds.firstOrNull == null
           ? null
           : repository.commitByReference(original.parentIds.first);
-      final changes = _changesBetween(
-        parent?.snapshot ?? <String, String>{},
-        original.snapshot,
-      );
-      for (final path in changes) {
+      final base = parent?.snapshot ?? <String, String>{};
+      final changes = _changesBetween(base, original.snapshot);
+      final current = repository.head?.snapshot ?? <String, String>{};
+      final conflicting = changes
+          .where(
+            (path) =>
+                current[path] != base[path] &&
+                current[path] != original.snapshot[path],
+          )
+          .toSet();
+      for (final path in changes.difference(conflicting)) {
         final content = original.snapshot[path];
         if (content == null) {
           repository.files.remove(path);
@@ -816,13 +917,42 @@ Astuce : commence par git init, puis git status.''');
             state: FileState.staged,
           );
         }
+        repository.stagedFiles.add(path);
+      }
+      if (conflicting.isNotEmpty) {
+        for (final path in conflicting) {
+          final conflict = MergeConflict(
+            path: path,
+            baseContent: base[path],
+            currentContent: current[path],
+            incomingContent: original.snapshot[path],
+            incomingBranch: 'commit ${original.id}',
+          );
+          repository.conflicts[path] = conflict;
+          repository.files[path] = VirtualFile(
+            path,
+            '<<<<<<< base ${operation.targetBranch}\n${conflict.currentContent ?? ''}\n=======\n${conflict.incomingContent ?? ''}\n>>>>>>> ${conflict.incomingBranch}',
+            state: FileState.conflicted,
+          );
+        }
+        repository.reflog.add(
+          '${repository.head?.id ?? '0000000'} rebase: conflit dans ${conflicting.join(', ')}',
+        );
+        return CommandResult(
+          'Rebase interrompu pendant “${original.message}” : conflit dans ${conflicting.join(', ')}.\nChoisis ou édite chaque version, utilise git add, puis git rebase --continue. Pour revenir en arrière : git rebase --abort.',
+          type: TerminalOutputType.warning,
+        );
       }
       repository.stagedFiles.addAll(changes);
       repository.createCommit(original.message);
+      operation.pendingCommitIds.removeAt(0);
+      replayed += 1;
     }
-    repository.reflog.add('${repository.head!.id} rebase: onto $targetBranch');
+    final target = operation.targetBranch;
+    repository.pendingRebase = null;
+    repository.reflog.add('${repository.head!.id} rebase: onto $target');
     return CommandResult(
-      '${commitsToReplay.length} commit(s) rejoué(s) sur $targetBranch.\nLes identifiants ont changé : ne rebase pas des commits déjà partagés.',
+      'Rebase terminé sur $target${replayed > 0 ? ' après $replayed commit(s) rejoué(s)' : ''}.\nLes identifiants ont changé : ne republie pas sans vérifier l’historique.',
       type: TerminalOutputType.success,
     );
   }

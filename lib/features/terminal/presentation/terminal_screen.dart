@@ -44,6 +44,8 @@ class _TerminalScreenState extends State<TerminalScreen> {
     'checkout --theirs ',
     'cherry-pick ',
     'rebase main',
+    'rebase --continue',
+    'rebase --abort',
   ];
 
   @override
@@ -128,9 +130,21 @@ class _TerminalScreenState extends State<TerminalScreen> {
               onPressed: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) => FractionallySizedBox(
-                  heightFactor: .78,
-                  child: RepositoryPanel(repository: repository),
+                builder: (_) => StatefulBuilder(
+                  builder: (context, setSheetState) => FractionallySizedBox(
+                    heightFactor: .78,
+                    child: RepositoryPanel(
+                      repository: repository,
+                      onCommand: (command) {
+                        _runPreset(command);
+                        setSheetState(() {});
+                      },
+                      onEditConflict: (conflict) async {
+                        await _editConflict(conflict);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
                 ),
               ),
               child: const Icon(Icons.account_tree_rounded),
@@ -144,7 +158,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 2,
-                    child: RepositoryPanel(repository: repository),
+                    child: RepositoryPanel(
+                      repository: repository,
+                      onCommand: _runPreset,
+                      onEditConflict: _editConflict,
+                    ),
                   ),
                 ],
               )
@@ -338,6 +356,55 @@ class _TerminalScreenState extends State<TerminalScreen> {
     input.text = history[history.length - 1 - historyIndex];
   }
 
+  void _runPreset(String command) {
+    input.text = command;
+    execute();
+  }
+
+  Future<void> _editConflict(MergeConflict conflict) async {
+    final controller = TextEditingController(
+      text: AppScope.of(context).repository.files[conflict.path]?.content ?? '',
+    );
+    final content = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Résoudre ${conflict.path}'),
+        content: SizedBox(
+          width: 620,
+          child: TextField(
+            controller: controller,
+            minLines: 8,
+            maxLines: 16,
+            autofocus: true,
+            style: const TextStyle(fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              hintText:
+                  'Compose le contenu final sans les marqueurs de conflit.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Utiliser ce contenu'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (content == null || !mounted) return;
+    final result = AppScope.of(
+      context,
+    ).engine.editConflict(conflict.path, content);
+    setState(() {
+      entries.add(TerminalEntry('édition ${conflict.path}', result));
+    });
+  }
+
   Future<void> _confirmReset(VirtualRepository repository) async {
     final confirmed =
         await showDialog<bool>(
@@ -450,8 +517,15 @@ class _EntryView extends StatelessWidget {
 }
 
 class RepositoryPanel extends StatelessWidget {
-  const RepositoryPanel({required this.repository, super.key});
+  const RepositoryPanel({
+    required this.repository,
+    this.onCommand,
+    this.onEditConflict,
+    super.key,
+  });
   final VirtualRepository repository;
+  final ValueChanged<String>? onCommand;
+  final Future<void> Function(MergeConflict)? onEditConflict;
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
@@ -540,10 +614,12 @@ class RepositoryPanel extends StatelessWidget {
                                   color: Theme.of(context).colorScheme.error,
                                 ),
                                 const SizedBox(width: 8),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Fusion interrompue',
-                                    style: TextStyle(
+                                    repository.pendingRebase != null
+                                        ? 'Rebase interrompu'
+                                        : 'Fusion interrompue',
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.w900,
                                     ),
                                   ),
@@ -552,20 +628,17 @@ class RepositoryPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             for (final conflict in repository.conflicts.values)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  '${conflict.path}\n  actuelle : ${conflict.currentContent ?? 'fichier absent'}\n  ${conflict.incomingBranch} : ${conflict.incomingContent ?? 'fichier absent'}',
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    height: 1.45,
-                                  ),
-                                ),
+                              _ConflictResolverCard(
+                                conflict: conflict,
+                                file: repository.files[conflict.path],
+                                onCommand: onCommand,
+                                onEdit: onEditConflict,
                               ),
                             const SizedBox(height: 10),
-                            const Text(
-                              'Choisis une version dans le terminal, puis exécute git add et git commit.',
+                            Text(
+                              repository.pendingRebase != null
+                                  ? 'Quand tous les fichiers sont préparés, exécute git rebase --continue.'
+                                  : 'Quand tous les fichiers sont préparés, crée le commit de fusion.',
                             ),
                           ],
                         ),
@@ -639,6 +712,141 @@ class RepositoryPanel extends StatelessWidget {
                   ],
                 )
               : const _TerminalWelcome(),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ConflictResolverCard extends StatelessWidget {
+  const _ConflictResolverCard({
+    required this.conflict,
+    required this.file,
+    required this.onCommand,
+    required this.onEdit,
+  });
+
+  final MergeConflict conflict;
+  final VirtualFile? file;
+  final ValueChanged<String>? onCommand;
+  final Future<void> Function(MergeConflict)? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final versionChosen = file?.state == FileState.modified;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: .55),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.description_outlined, size: 18),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  conflict.path,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              if (versionChosen)
+                const Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.orange,
+                  size: 18,
+                ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          _ConflictVersion(
+            label: 'Version actuelle',
+            content: conflict.currentContent,
+          ),
+          const SizedBox(height: 7),
+          _ConflictVersion(
+            label: conflict.incomingBranch,
+            content: conflict.incomingContent,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              OutlinedButton(
+                onPressed: onCommand == null
+                    ? null
+                    : () => onCommand!('git checkout --ours ${conflict.path}'),
+                child: const Text('Actuelle'),
+              ),
+              OutlinedButton(
+                onPressed: onCommand == null
+                    ? null
+                    : () =>
+                          onCommand!('git checkout --theirs ${conflict.path}'),
+                child: const Text('Entrante'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onEdit == null ? null : () => onEdit!(conflict),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Éditer'),
+              ),
+              if (versionChosen)
+                FilledButton.icon(
+                  onPressed: onCommand == null
+                      ? null
+                      : () => onCommand!('git add ${conflict.path}'),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Marquer résolu'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConflictVersion extends StatelessWidget {
+  const _ConflictVersion({required this.label, required this.content});
+
+  final String label;
+  final String? content;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: const Color(0xFF080D18),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.violet,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          content ?? 'fichier absent',
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFFE2E8F0),
+            fontFamily: 'monospace',
+            fontSize: 11,
+          ),
         ),
       ],
     ),
