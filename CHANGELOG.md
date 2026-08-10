@@ -38,6 +38,7 @@
 - Le parcours propose maintenant 16 leçons et 27 exercices, avec le badge « Cap confirmé » à dix leçons.
 - Ajout de quatre leçons professionnelles sur les workflows, les commits conventionnels, SemVer et la sécurité.
 - Les sept niveaux proposent désormais 20 leçons et 35 exercices, avec le badge « Sommet Git » à vingt leçons.
+- Ajout de quatre missions professionnelles sur stash, la synchronisation distante, les commits conventionnels et la livraison versionnée.
 
 ## 1.0.0 — 2026-08-03
 

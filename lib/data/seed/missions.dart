@@ -257,6 +257,112 @@ final missions = <Mission>[
       return repo.reflog.any((entry) => entry.contains('rebase: onto main'));
     },
   ),
+  Mission(
+    id: 'temporary-shelter',
+    title: 'Interruption urgente',
+    context:
+        'Tu dois changer de tâche alors que README.md contient un travail inachevé. Mets-le temporairement à l’abri, puis restaure-le sans créer de commit parasite.',
+    objectives: const [
+      'Modifier un fichier déjà suivi',
+      'Mettre les changements de côté avec stash',
+      'Retrouver une copie de travail propre',
+      'Restaurer les changements avec stash pop',
+    ],
+    hints: const [
+      'Le stash range provisoirement les modifications suivies.',
+      'Après la mise de côté, la liste des stash contient ton travail.',
+      'echo "Travail en cours" > README.md → git stash → git status → git stash pop',
+    ],
+    xp: 160,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      return repo.commandHistory.any((command) => command == 'git stash') &&
+          repo.commandHistory.any((command) => command == 'git stash pop') &&
+          repo.stashes.isEmpty &&
+          repo.files.values.any((file) => file.state == FileState.modified);
+    },
+  ),
+  Mission(
+    id: 'safe-sync',
+    title: 'Synchronisation prudente',
+    context:
+        'Avant d’envoyer ton travail, inspecte les changements distants, intègre-les puis publie ta branche dans le laboratoire hors connexion.',
+    objectives: const [
+      'Configurer le dépôt origin',
+      'Récupérer les références avec fetch',
+      'Intégrer les changements avec pull',
+      'Publier la branche avec push',
+    ],
+    hints: const [
+      'fetch observe le distant sans intégrer ses changements.',
+      'pull récupère puis intègre ; push publie les commits locaux.',
+      'git remote add origin URL → git fetch origin → git pull origin main → git push origin main',
+    ],
+    xp: 190,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      return repo.remotes.containsKey('origin') &&
+          repo.commandHistory.any(
+            (command) => command.startsWith('git fetch'),
+          ) &&
+          repo.commandHistory.any(
+            (command) => command.startsWith('git pull'),
+          ) &&
+          repo.commandHistory.any((command) => command.startsWith('git push'));
+    },
+  ),
+  Mission(
+    id: 'conventional-history',
+    title: 'Historique automatisable',
+    context:
+        'L’équipe prépare ses notes de version automatiquement. Crée un commit dont le message indique clairement la nature du changement.',
+    objectives: const [
+      'Préparer au moins un changement',
+      'Créer un commit avec un préfixe conventionnel',
+      'Vérifier le message dans l’historique compact',
+    ],
+    hints: const [
+      'Les préfixes usuels sont feat, fix, docs, test et refactor.',
+      'Le préfixe est suivi de deux-points puis d’une description précise.',
+      'git add . → git commit -m "feat: ajoute une fonctionnalité" → git log --oneline',
+    ],
+    xp: 170,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      final conventional = RegExp(r'^(feat|fix|docs|test|refactor): .+');
+      return repo.commits.any(
+            (commit) => conventional.hasMatch(commit.message),
+          ) &&
+          repo.commandHistory.any((command) => command == 'git log --oneline');
+    },
+  ),
+  Mission(
+    id: 'professional-release',
+    title: 'Livraison professionnelle',
+    context:
+        'Une évolution validée doit devenir la version 2.0.0. Marque exactement le commit conventionnel livré et simule sa publication sur origin.',
+    objectives: const [
+      'Terminer par un commit conventionnel',
+      'Créer le tag v2.0.0 sur HEAD',
+      'Configurer origin si nécessaire',
+      'Simuler la publication avec push',
+    ],
+    hints: const [
+      'Le tag est attaché au commit qui est HEAD au moment de sa création.',
+      'Vérifie que le dernier message commence par feat: ou fix: avant de poser le tag.',
+      'git commit -m "feat: prépare la version majeure" → git tag v2.0.0 → git push origin main',
+    ],
+    xp: 260,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      final head = repo.head;
+      return head != null &&
+          RegExp(r'^(feat|fix): .+').hasMatch(head.message) &&
+          repo.tags['v2.0.0'] == head.id &&
+          repo.remotes.containsKey('origin') &&
+          repo.commandHistory.any((command) => command.startsWith('git push'));
+    },
+  ),
 ];
 
 extension LastOrNull<T> on List<T> {
