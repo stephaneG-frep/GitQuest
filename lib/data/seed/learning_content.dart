@@ -392,6 +392,261 @@ const lessons = <Lesson>[
       ),
     ],
   ),
+  Lesson(
+    id: 'github-issues',
+    level: 5,
+    title: 'Organiser avec les issues',
+    subtitle: 'Transformer un besoin en travail clair',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Une issue décrit un besoin, un bug ou une amélioration. Un bon titre résume le résultat attendu et la description fournit le contexte utile.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Ajoute un label et une priorité pour permettre à l’équipe de trier le travail sans relire chaque description.',
+      ),
+      LessonBlock(
+        LessonBlockType.analogy,
+        'Une issue est une fiche de quête : elle explique le problème, les contraintes et la condition de réussite.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e16',
+        question: 'Quel titre d’issue est le plus utile ?',
+        options: ['Ça ne marche pas', 'Bug', 'Corrige le contraste du bouton'],
+        answer: 2,
+        explanation:
+            'Un titre précis permet de comprendre immédiatement le résultat attendu.',
+      ),
+      Exercise(
+        id: 'e17',
+        question: 'À quoi sert principalement un label ?',
+        options: [
+          'Classer le travail',
+          'Fusionner une branche',
+          'Créer un tag',
+        ],
+        answer: 0,
+        explanation:
+            'Les labels regroupent les issues par nature, domaine ou priorité.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'pull-requests',
+    level: 5,
+    title: 'Proposer une pull request',
+    subtitle: 'Présenter un changement avant sa fusion',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Une pull request compare une branche source à une branche cible. Elle ouvre un espace de discussion autour des commits et fichiers proposés.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Une petite pull request avec une description claire est plus rapide à comprendre, tester et relire.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Vérifie toujours le sens source → cible. Pour intégrer une fonctionnalité, feature est la source et main la cible.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e18',
+        question: 'Que compare une pull request ?',
+        options: [
+          'Deux branches',
+          'Deux mots de passe',
+          'Deux dépôts supprimés',
+        ],
+        answer: 0,
+        explanation:
+            'La proposition montre la différence entre la source et la cible.',
+      ),
+      Exercise(
+        id: 'e19',
+        question: 'Pour intégrer feature dans main, quelle est la cible ?',
+        options: ['feature', 'main', 'origin'],
+        answer: 1,
+        explanation: 'main est la branche qui recevra les changements.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'reviews-ci',
+    level: 5,
+    title: 'Revue, CI et protection',
+    subtitle: 'Sécuriser la branche principale',
+    minutes: 12,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'La revue humaine vérifie l’intention et la lisibilité. La CI exécute automatiquement des contrôles reproductibles comme l’analyse, les tests et la compilation.',
+      ),
+      LessonBlock(
+        LessonBlockType.analogy,
+        'La protection de branche est une porte à deux serrures : l’approbation humaine et les contrôles automatisés.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Un nouveau commit invalide les anciens résultats de CI : les contrôles doivent porter sur la version réellement fusionnée.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e20',
+        question: 'La CI remplace-t-elle entièrement la revue humaine ?',
+        options: ['Oui', 'Non'],
+        answer: 1,
+        explanation:
+            'Les contrôles automatiques et la compréhension humaine sont complémentaires.',
+      ),
+      Exercise(
+        id: 'e21',
+        question: 'Pourquoi relancer la CI après un nouveau commit ?',
+        options: [
+          'Pour tester la dernière version',
+          'Pour renommer la branche',
+          'Pour fermer l’issue',
+        ],
+        answer: 0,
+        explanation:
+            'Un résultat ancien ne garantit rien sur le nouveau contenu.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'repair-history',
+    level: 6,
+    title: 'Réparer sans paniquer',
+    subtitle: 'Choisir amend, reset ou revert',
+    minutes: 13,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.command,
+        'git commit --amend -m "Message corrigé"',
+        caption: 'Remplace le dernier commit local.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git reset --soft HEAD~1',
+        caption: 'Déplace HEAD et conserve les changements préparés.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git revert HEAD',
+        caption: 'Ajoute une annulation sans effacer l’historique partagé.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Sur une branche déjà partagée, préfère revert : les autres membres conservent un historique cohérent.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e22',
+        question: 'Quelle commande convient à un commit déjà partagé ?',
+        options: ['git revert HEAD', 'git init', 'git remote add'],
+        answer: 0,
+        explanation: 'revert crée une annulation traçable et collaborative.',
+      ),
+      Exercise(
+        id: 'e23',
+        question: 'Que conserve reset --soft ?',
+        options: ['Les changements préparés', 'Rien', 'Uniquement les tags'],
+        answer: 0,
+        explanation:
+            'Le commit est retiré de la branche, mais son contenu reste dans l’index.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'cherry-pick',
+    level: 6,
+    title: 'Rejouer un changement ciblé',
+    subtitle: 'Importer un commit sans toute la branche',
+    minutes: 10,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git log --oneline'),
+      LessonBlock(LessonBlockType.command, 'git cherry-pick a1b2c3d'),
+      LessonBlock(
+        LessonBlockType.text,
+        'cherry-pick applique le changement introduit par un commit et crée un nouveau commit sur la branche courante.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Utilise-le pour un correctif ciblé. Pour intégrer toute une ligne de travail, une fusion est généralement plus lisible.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e24',
+        question: 'Que faut-il fournir à git cherry-pick ?',
+        options: ['Un identifiant de commit', 'Une URL', 'Un mot de passe'],
+        answer: 0,
+        explanation: 'Git doit savoir précisément quel commit rejouer.',
+      ),
+      Exercise(
+        id: 'e25',
+        question: 'Le commit rejoué garde-t-il forcément le même identifiant ?',
+        options: ['Oui', 'Non'],
+        answer: 1,
+        explanation:
+            'Son parent change, donc son nouvel identifiant est généralement différent.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'rebase',
+    level: 6,
+    title: 'Rebaser avec méthode',
+    subtitle: 'Rejouer une branche sur une base récente',
+    minutes: 14,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git rebase main'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Le rebase déplace la base logique de ta branche puis recrée ses commits un à un au-dessus de main.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git rebase --continue'),
+      LessonBlock(LessonBlockType.command, 'git rebase --abort'),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Évite de rebaser une branche publique utilisée par d’autres personnes : les identifiants de commits sont réécrits.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e26',
+        question: 'Après avoir résolu et préparé un conflit de rebase ?',
+        options: [
+          'git rebase --continue',
+          'git init',
+          'git branch --delete-all',
+        ],
+        answer: 0,
+        explanation:
+            'La continuation reprend le rejeu des commits encore en attente.',
+      ),
+      Exercise(
+        id: 'e27',
+        question: 'Que fait git rebase --abort ?',
+        options: [
+          'Restaure l’état avant le rebase',
+          'Supprime le dépôt',
+          'Fusionne automatiquement',
+        ],
+        answer: 0,
+        explanation:
+            'L’annulation remet la branche et les fichiers dans leur état initial.',
+      ),
+    ],
+  ),
 ];
 
 const achievements = <Achievement>[
@@ -442,6 +697,12 @@ const achievements = <Achievement>[
     'En route',
     'Terminer cinq leçons',
     Icons.rocket_launch_rounded,
+  ),
+  Achievement(
+    'ten_lessons',
+    'Cap confirmé',
+    'Terminer dix leçons',
+    Icons.school_rounded,
   ),
   Achievement(
     'issue_author',

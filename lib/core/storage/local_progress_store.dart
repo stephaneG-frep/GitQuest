@@ -202,6 +202,9 @@ class LocalProgressStore extends ChangeNotifier {
       if (completedLessons.length >= 5) {
         unlockedAchievements.add('five_lessons');
       }
+      if (completedLessons.length >= 10) {
+        unlockedAchievements.add('ten_lessons');
+      }
       await _changed();
     }
   }
