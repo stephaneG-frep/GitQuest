@@ -50,6 +50,18 @@ void main() {
       expect(result.text, contains('git add'));
     });
 
+    test('un commit exclut les fichiers non préparés', () {
+      engine.execute('git init');
+      engine.execute('touch notes.md');
+      engine.execute('touch draft.md');
+      engine.execute('git add notes.md');
+      engine.execute('git commit -m "Ajoute les notes"');
+
+      expect(repository.head!.snapshot, contains('notes.md'));
+      expect(repository.head!.snapshot, isNot(contains('draft.md')));
+      expect(repository.files['draft.md']!.state, FileState.untracked);
+    });
+
     test('compte les réussites, erreurs et corrections', () {
       engine.execute('git init');
       expect(engine.execute('git add').isSuccess, isFalse);

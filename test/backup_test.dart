@@ -12,6 +12,9 @@ void main() {
     final source = LocalProgressStore()
       ..name = 'Ada'
       ..xp = 240
+      ..reminderEnabled = true
+      ..reminderHour = 18
+      ..reminderMinute = 30
       ..completedLessons.add('versioning');
     final raw = source.exportJson();
     expect(jsonDecode(raw), containsPair('formatVersion', 1));
@@ -20,6 +23,9 @@ void main() {
     expect(await target.importJson(raw), isNull);
     expect(target.name, 'Ada');
     expect(target.xp, 240);
+    expect(target.reminderEnabled, isTrue);
+    expect(target.reminderHour, 18);
+    expect(target.reminderMinute, 30);
     expect(target.completedLessons, contains('versioning'));
   });
 

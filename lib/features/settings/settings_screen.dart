@@ -75,6 +75,35 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           _Section(
+            title: 'Rappel d’apprentissage',
+            children: [
+              SwitchListTile.adaptive(
+                secondary: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Rappel quotidien'),
+                subtitle: Text(
+                  store.reminderEnabled
+                      ? 'Programmé chaque jour à ${_formatTime(store.reminderHour, store.reminderMinute)}'
+                      : 'Désactivé • aucune notification envoyée',
+                ),
+                value: store.reminderEnabled,
+                onChanged: (enabled) =>
+                    _toggleReminder(context, store, enabled),
+              ),
+              ListTile(
+                enabled: store.reminderEnabled,
+                leading: const Icon(Icons.schedule_rounded),
+                title: const Text('Heure du rappel'),
+                trailing: Text(
+                  _formatTime(store.reminderHour, store.reminderMinute),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                onTap: store.reminderEnabled
+                    ? () => _pickReminderTime(context, store)
+                    : null,
+              ),
+            ],
+          ),
+          _Section(
             title: 'Données',
             children: [
               ListTile(
@@ -129,7 +158,7 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.info_outline_rounded),
                 title: Text('GitQuest'),
-                subtitle: Text('Version 1.0.0 • MVP hors connexion'),
+                subtitle: Text('Version 1.1.0 • Apprentissage hors connexion'),
               ),
             ],
           ),
@@ -159,6 +188,102 @@ class SettingsScreen extends StatelessWidget {
     );
     controller.dispose();
     if (value != null) await store.updateName(value);
+  }
+
+  String _formatTime(int hour, int minute) =>
+      '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+  Future<void> _toggleReminder(
+    BuildContext context,
+    LocalProgressStore store,
+    bool enabled,
+  ) async {
+    final scheduler = AppScope.of(context).reminderScheduler;
+    if (scheduler == null) {
+      _showReminderMessage(
+        context,
+        'Les notifications ne sont pas disponibles sur cette plateforme.',
+      );
+      return;
+    }
+    try {
+      if (!enabled) {
+        await scheduler.cancel();
+        await store.updateReminder(
+          enabled: false,
+          hour: store.reminderHour,
+          minute: store.reminderMinute,
+        );
+        return;
+      }
+      final granted = await scheduler.requestPermission();
+      if (!granted) {
+        if (context.mounted) {
+          _showReminderMessage(
+            context,
+            'Autorise les notifications pour activer le rappel.',
+          );
+        }
+        return;
+      }
+      await scheduler.scheduleDaily(
+        hour: store.reminderHour,
+        minute: store.reminderMinute,
+      );
+      await store.updateReminder(
+        enabled: true,
+        hour: store.reminderHour,
+        minute: store.reminderMinute,
+      );
+    } on Object {
+      if (context.mounted) {
+        _showReminderMessage(
+          context,
+          'Impossible de programmer le rappel sur cet appareil.',
+        );
+      }
+    }
+  }
+
+  Future<void> _pickReminderTime(
+    BuildContext context,
+    LocalProgressStore store,
+  ) async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: store.reminderHour,
+        minute: store.reminderMinute,
+      ),
+      helpText: 'Heure du rappel GitQuest',
+    );
+    if (selected == null || !context.mounted) return;
+    final scheduler = AppScope.of(context).reminderScheduler;
+    if (scheduler == null) return;
+    try {
+      await scheduler.scheduleDaily(
+        hour: selected.hour,
+        minute: selected.minute,
+      );
+      await store.updateReminder(
+        enabled: true,
+        hour: selected.hour,
+        minute: selected.minute,
+      );
+    } on Object {
+      if (context.mounted) {
+        _showReminderMessage(
+          context,
+          'Impossible de modifier l’heure du rappel.',
+        );
+      }
+    }
+  }
+
+  void _showReminderMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   BackupService _backupService(BuildContext context) {
@@ -397,6 +522,7 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _reset(BuildContext context, LocalProgressStore store) async {
     final projectProgressStore = AppScope.of(context).projectProgressStore;
+    final reminderScheduler = AppScope.of(context).reminderScheduler;
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -419,6 +545,7 @@ class SettingsScreen extends StatelessWidget {
         ) ??
         false;
     if (confirmed) {
+      await reminderScheduler?.cancel();
       await projectProgressStore.clear();
       await store.reset();
     }

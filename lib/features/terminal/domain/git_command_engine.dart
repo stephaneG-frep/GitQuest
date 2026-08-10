@@ -663,6 +663,11 @@ Astuce : commence par git init, puis git status.''');
       }
     }
     repository.checkoutSnapshot(merged);
+    final mergedChanges = _changesBetween(currentHead.snapshot, merged);
+    repository.stagedFiles.addAll(mergedChanges);
+    for (final path in mergedChanges.where(repository.files.containsKey)) {
+      repository.files[path]!.state = FileState.staged;
+    }
     if (conflicts.isNotEmpty) {
       repository
         ..conflicts.addAll(conflicts)
@@ -1157,6 +1162,11 @@ Astuce : commence par git init, puis git status.''');
     }
     if (parent == null) {
       repository.stagedFiles.addAll(target.snapshot.keys);
+    } else {
+      repository.stagedFiles.addAll(<String>{
+        ...target.snapshot.keys,
+        ...parent.snapshot.keys,
+      });
     }
     final commit = repository.createCommit('Annule “${target.message}”');
     return CommandResult(

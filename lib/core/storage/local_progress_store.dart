@@ -13,6 +13,9 @@ class LocalProgressStore extends ChangeNotifier {
   ThemePreference themePreference = ThemePreference.dark;
   double textScale = 1;
   int dailyGoal = 10;
+  bool reminderEnabled = false;
+  int reminderHour = 19;
+  int reminderMinute = 0;
   int xp = 0;
   int streak = 1;
   int bestStreak = 1;
@@ -52,6 +55,9 @@ class LocalProgressStore extends ChangeNotifier {
       'theme': themePreference.name,
       'textScale': textScale,
       'dailyGoal': dailyGoal,
+      'reminderEnabled': reminderEnabled,
+      'reminderHour': reminderHour,
+      'reminderMinute': reminderMinute,
     },
     'progress': <String, dynamic>{
       'onboardingComplete': onboardingComplete,
@@ -147,6 +153,9 @@ class LocalProgressStore extends ChangeNotifier {
         themePreference;
     textScale = (settings['textScale'] as num?)?.toDouble() ?? textScale;
     dailyGoal = settings['dailyGoal'] as int? ?? dailyGoal;
+    reminderEnabled = settings['reminderEnabled'] as bool? ?? false;
+    reminderHour = (settings['reminderHour'] as int? ?? 19).clamp(0, 23);
+    reminderMinute = (settings['reminderMinute'] as int? ?? 0).clamp(0, 59);
     onboardingComplete = progress['onboardingComplete'] as bool? ?? false;
     _replace(completedLessons, progress['completedLessons']);
     _replace(completedMissions, progress['completedMissions']);
@@ -208,6 +217,9 @@ class LocalProgressStore extends ChangeNotifier {
       if (completedLessons.length >= 20) {
         unlockedAchievements.add('twenty_lessons');
       }
+      if (completedLessons.length >= 40) {
+        unlockedAchievements.add('forty_lessons');
+      }
       await _changed();
     }
   }
@@ -247,6 +259,17 @@ class LocalProgressStore extends ChangeNotifier {
     await _changed();
   }
 
+  Future<void> updateReminder({
+    required bool enabled,
+    required int hour,
+    required int minute,
+  }) async {
+    reminderEnabled = enabled;
+    reminderHour = hour.clamp(0, 23);
+    reminderMinute = minute.clamp(0, 59);
+    await _changed();
+  }
+
   Future<void> toggleFavorite(String command) async {
     favoriteCommands.contains(command)
         ? favoriteCommands.remove(command)
@@ -278,6 +301,9 @@ class LocalProgressStore extends ChangeNotifier {
     themePreference = ThemePreference.dark;
     textScale = 1;
     dailyGoal = 10;
+    reminderEnabled = false;
+    reminderHour = 19;
+    reminderMinute = 0;
     xp = 0;
     streak = 1;
     bestStreak = 1;

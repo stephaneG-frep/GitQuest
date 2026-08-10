@@ -7,14 +7,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('le catalogue contient des identifiants et réponses valides', () {
-    expect(lessons, hasLength(20));
+    expect(lessons, hasLength(40));
     final lessonIds = lessons.map((lesson) => lesson.id).toSet();
     final exercises = lessons.expand((lesson) => lesson.exercises).toList();
     final exerciseIds = exercises.map((exercise) => exercise.id).toSet();
 
     expect(lessonIds, hasLength(lessons.length));
     expect(exerciseIds, hasLength(exercises.length));
-    expect(exercises, hasLength(35));
+    expect(exercises, hasLength(55));
     expect(
       exercises.every(
         (exercise) =>
@@ -31,7 +31,7 @@ void main() {
     }
   });
 
-  test('les jalons de dix et vingt leçons débloquent leurs badges', () async {
+  test('les jalons de progression débloquent leurs badges', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = LocalProgressStore();
 
@@ -39,8 +39,9 @@ void main() {
       await store.completeLesson(lesson.id);
     }
 
-    expect(store.completedLessons, hasLength(20));
+    expect(store.completedLessons, hasLength(40));
     expect(store.unlockedAchievements, contains('ten_lessons'));
     expect(store.unlockedAchievements, contains('twenty_lessons'));
+    expect(store.unlockedAchievements, contains('forty_lessons'));
   });
 }

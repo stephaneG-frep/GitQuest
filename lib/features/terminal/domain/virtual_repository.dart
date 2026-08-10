@@ -119,6 +119,15 @@ class VirtualRepository {
   VirtualCommit createCommit(String message, {List<String>? parents}) {
     _commitSequence += 1;
     final id = (_commitSequence * 2654435761).toRadixString(16).substring(0, 7);
+    final snapshot = Map<String, String>.from(head?.snapshot ?? const {});
+    for (final path in stagedFiles) {
+      final file = files[path];
+      if (file == null) {
+        snapshot.remove(path);
+      } else {
+        snapshot[path] = file.content;
+      }
+    }
     final commit = VirtualCommit(
       id: id,
       message: message,
@@ -129,9 +138,7 @@ class VirtualRepository {
           <String>[
             if (branches[currentBranch] case final String parent) parent,
           ],
-      snapshot: <String, String>{
-        for (final file in files.values) file.path: file.content,
-      },
+      snapshot: snapshot,
     );
     commits.add(commit);
     branches[currentBranch] = id;

@@ -39,6 +39,12 @@
 - Ajout de quatre leçons professionnelles sur les workflows, les commits conventionnels, SemVer et la sécurité.
 - Les sept niveaux proposent désormais 20 leçons et 35 exercices, avec le badge « Sommet Git » à vingt leçons.
 - Ajout de quatre missions professionnelles sur stash, la synchronisation distante, les commits conventionnels et la livraison versionnée.
+- Extension du catalogue à 40 leçons et 55 exercices répartis sur les sept niveaux.
+- Ajout du badge « Maître du parcours » pour l’achèvement des quarante leçons.
+- Extension du catalogue à 25 missions avec dix nouveaux scénarios pratiques.
+- Correction des commits sélectifs : seuls les fichiers préparés entrent désormais dans le snapshot.
+- Ajout d’un rappel quotidien facultatif avec choix de l’heure et persistance locale.
+- Reprogrammation automatique du rappel après redémarrage du téléphone ou mise à jour de l’application.
 
 ## 1.0.0 — 2026-08-03
 

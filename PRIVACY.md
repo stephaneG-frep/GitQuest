@@ -7,5 +7,6 @@ GitQuest fonctionne localement et ne collecte aucune donnée personnelle.
 - Aucun outil publicitaire ou de suivi distant n’est intégré.
 - Le profil, les réglages et la progression sont stockés sur l’appareil.
 - L’utilisateur choisit lui-même d’exporter ou d’importer une sauvegarde.
+- Le rappel facultatif utilise uniquement le planificateur de notifications de l’appareil et peut être désactivé à tout moment.
 
 Les URL saisies dans le terminal sont utilisées uniquement par la simulation locale et ne déclenchent aucune connexion réseau.

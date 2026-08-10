@@ -835,6 +835,544 @@ const lessons = <Lesson>[
       ),
     ],
   ),
+  Lesson(
+    id: 'ignore-files',
+    level: 1,
+    title: 'Ignorer les bons fichiers',
+    subtitle: 'Garder le dépôt propre dès le départ',
+    minutes: 7,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'touch .gitignore'),
+      LessonBlock(
+        LessonBlockType.text,
+        '.gitignore décrit les fichiers générés ou locaux que Git ne doit pas proposer au suivi, comme build/, .env ou les caches.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e36',
+        question: 'Quel fichier contient les règles d’exclusion ?',
+        options: ['.gitignore', '.gitkeep', 'README.md'],
+        answer: 0,
+        explanation: '.gitignore centralise les motifs ignorés par Git.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'inspect-worktree',
+    level: 1,
+    title: 'Inspecter avant d’agir',
+    subtitle: 'Développer de bons réflexes sans risque',
+    minutes: 6,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'pwd'),
+      LessonBlock(LessonBlockType.command, 'ls'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Commence par identifier le dossier et son contenu, puis utilise git status avant toute commande qui modifie l’état.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e37',
+        question: 'Quelle commande Git inspecte la copie de travail ?',
+        options: ['git status', 'git reset --hard', 'git commit'],
+        answer: 0,
+        explanation: 'git status observe sans modifier les fichiers.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'read-diff',
+    level: 2,
+    title: 'Lire les différences',
+    subtitle: 'Relire exactement ce qui a changé',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git diff'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Les lignes précédées de + sont ajoutées et celles précédées de - sont retirées. Relire le diff évite les changements accidentels.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e38',
+        question: 'Dans un diff, que signifie une ligne préfixée par + ?',
+        options: ['Ajoutée', 'Supprimée', 'Ignorée'],
+        answer: 0,
+        explanation: 'Le signe + représente le contenu ajouté.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'restore-file',
+    level: 2,
+    title: 'Restaurer un fichier',
+    subtitle: 'Annuler une modification locale ciblée',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git restore README.md'),
+      LessonBlock(
+        LessonBlockType.warning,
+        'La restauration remplace le contenu non enregistré du fichier. Vérifie git diff avant de perdre un travail utile.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e39',
+        question: 'git restore README.md agit sur…',
+        options: [
+          'Le fichier ciblé',
+          'Toutes les branches',
+          'Le dépôt distant',
+        ],
+        answer: 0,
+        explanation: 'La commande restaure uniquement le chemin indiqué.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'atomic-commits',
+    level: 2,
+    title: 'Construire des commits atomiques',
+    subtitle: 'Une intention cohérente par étape',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un commit atomique regroupe un seul changement logique. Il peut être relu, annulé ou déplacé sans emporter du travail sans rapport.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Utilise git add fichier par fichier et relis git status avant de créer le commit.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e40',
+        question: 'Pourquoi séparer deux changements sans rapport ?',
+        options: [
+          'Pour faciliter revue et annulation',
+          'Pour supprimer main',
+          'Pour désactiver Git',
+        ],
+        answer: 0,
+        explanation: 'Chaque commit reste compréhensible et réutilisable.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'branch-names',
+    level: 3,
+    title: 'Nommer ses branches',
+    subtitle: 'Faire comprendre le travail au premier regard',
+    minutes: 6,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git switch -c fix/navigation'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Un préfixe court comme feature/, fix/ ou docs/ suivi d’un objectif précis facilite la navigation dans le dépôt.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e41',
+        question: 'Quel nom est le plus explicite ?',
+        options: ['branche2', 'test', 'fix/navigation-mobile'],
+        answer: 2,
+        explanation: 'Le nom décrit la nature et l’objectif du travail.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'fast-forward',
+    level: 3,
+    title: 'Comprendre le fast-forward',
+    subtitle: 'Fusionner quand les histoires ne divergent pas',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Si main n’a pas avancé depuis la création de feature, Git peut simplement déplacer le pointeur de main vers le dernier commit de feature.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git merge feature/profil'),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e42',
+        question: 'Un fast-forward crée-t-il forcément un commit de fusion ?',
+        options: ['Oui', 'Non'],
+        answer: 1,
+        explanation: 'Git peut seulement avancer le pointeur de branche.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'conflict-method',
+    level: 3,
+    title: 'Résoudre un conflit méthodiquement',
+    subtitle: 'Comprendre avant de choisir une version',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Lis les deux versions, compose le résultat final, prépare le fichier avec git add puis termine la fusion par un commit.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Ne supprime pas aveuglément les marqueurs : le bon résultat peut combiner les deux contributions.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e43',
+        question: 'Après avoir résolu le contenu d’un conflit ?',
+        options: ['git add fichier', 'git init', 'git remote -v'],
+        answer: 0,
+        explanation: 'git add indique à Git que le fichier est résolu.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'fetch-first',
+    level: 4,
+    title: 'Observer avec fetch',
+    subtitle: 'Récupérer sans intégrer immédiatement',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git fetch origin'),
+      LessonBlock(
+        LessonBlockType.text,
+        'fetch met à jour les références distantes sans modifier ta branche ni ta copie de travail.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e44',
+        question: 'fetch modifie-t-il directement les fichiers courants ?',
+        options: ['Oui', 'Non'],
+        answer: 1,
+        explanation:
+            'Il récupère les informations distantes sans les intégrer.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'pull-safely',
+    level: 4,
+    title: 'Intégrer avec pull',
+    subtitle: 'Mettre sa branche à jour consciemment',
+    minutes: 9,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git pull origin main'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Travaille avec une copie propre et inspecte d’abord les changements distants lorsque l’intégration peut être complexe.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e45',
+        question: 'pull combine généralement quelles actions ?',
+        options: [
+          'Récupération et intégration',
+          'Tag et suppression',
+          'Init et commit',
+        ],
+        answer: 0,
+        explanation: 'pull récupère puis intègre les changements distants.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'push-upstream',
+    level: 4,
+    title: 'Publier une branche',
+    subtitle: 'Partager les commits au bon endroit',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git push -u origin feature/profil'),
+      LessonBlock(
+        LessonBlockType.text,
+        'L’option -u associe la branche locale à sa branche distante afin de simplifier les prochains push et pull.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e46',
+        question: 'Que mémorise principalement l’option -u ?',
+        options: [
+          'La branche distante suivie',
+          'Le mot de passe',
+          'Le dernier conflit',
+        ],
+        answer: 0,
+        explanation: 'Elle configure la branche amont utilisée par défaut.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'issue-lifecycle',
+    level: 5,
+    title: 'Faire vivre une issue',
+    subtitle: 'Du signalement à la résolution',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Une issue évolue grâce aux précisions, décisions et liens vers le travail réalisé. Elle est fermée lorsque le résultat attendu est atteint.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Lie la pull request à son issue pour conserver la trace entre besoin, discussion et code livré.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e47',
+        question: 'Pourquoi lier une pull request à une issue ?',
+        options: [
+          'Conserver la traçabilité',
+          'Supprimer les commits',
+          'Éviter la CI',
+        ],
+        answer: 0,
+        explanation: 'Le besoin et sa solution restent reliés.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'pr-description',
+    level: 5,
+    title: 'Rédiger une bonne proposition',
+    subtitle: 'Aider la personne qui relit',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Une bonne description explique le problème, la solution choisie, la manière de tester et les éventuelles limites.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Ajoute des captures ou exemples quand le comportement visuel ou fonctionnel serait difficile à imaginer.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e48',
+        question: 'Que doit expliquer une description de pull request ?',
+        options: [
+          'Le pourquoi et le test',
+          'Uniquement le nom',
+          'Le mot de passe CI',
+        ],
+        answer: 0,
+        explanation:
+            'Le contexte et la vérification accélèrent une revue fiable.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'review-feedback',
+    level: 5,
+    title: 'Donner un retour utile',
+    subtitle: 'Améliorer le code sans bloquer la collaboration',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un commentaire de revue décrit un risque observable, explique son impact et propose si possible une piste concrète.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Distingue les changements obligatoires des simples suggestions et commente le code, jamais la personne.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e49',
+        question: 'Quel retour est le plus constructif ?',
+        options: [
+          'Ce contrôle accepte une valeur vide ; ajoutons un test',
+          'Mauvais code',
+          'Refais tout',
+        ],
+        answer: 0,
+        explanation: 'Il localise le risque et propose une action vérifiable.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'use-reflog',
+    level: 6,
+    title: 'Retrouver une référence avec reflog',
+    subtitle: 'Voir les déplacements récents de HEAD',
+    minutes: 9,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git reflog'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Le reflog enregistre localement les déplacements de références causés par commit, amend, reset, checkout ou rebase.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e50',
+        question: 'Le reflog aide surtout à retrouver…',
+        options: [
+          'Un ancien emplacement de HEAD',
+          'Une issue GitHub',
+          'Un mot de passe',
+        ],
+        answer: 0,
+        explanation: 'Il conserve le journal local des mouvements récents.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'stash-work',
+    level: 6,
+    title: 'Mettre un travail de côté',
+    subtitle: 'Changer de contexte sans commit provisoire',
+    minutes: 9,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git stash'),
+      LessonBlock(LessonBlockType.command, 'git stash pop'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Le stash est temporaire. Pour un travail durable ou partagé, préfère une branche et un commit clair.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e51',
+        question: 'Quelle commande restaure le dernier stash ?',
+        options: ['git stash pop', 'git restore --all', 'git push'],
+        answer: 0,
+        explanation: 'stash pop applique puis retire la sauvegarde temporaire.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'reset-modes',
+    level: 6,
+    title: 'Comparer les modes de reset',
+    subtitle: 'Déplacer HEAD avec le bon niveau de conservation',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        '--soft conserve l’index, --mixed retire les changements de l’index et --hard restaure aussi les fichiers.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'reset --hard détruit les modifications non enregistrées. Vérifie status et crée une sauvegarde si tu hésites.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e52',
+        question: 'Quel mode est le plus destructeur ?',
+        options: ['--soft', '--mixed', '--hard'],
+        answer: 2,
+        explanation:
+            '--hard remplace également le contenu de la copie de travail.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'diagnose-ci',
+    level: 7,
+    title: 'Diagnostiquer une CI rouge',
+    subtitle: 'Lire le premier échec utile',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Identifie le job en échec, lis son premier message pertinent, reproduis localement si possible puis corrige la cause plutôt que le symptôme.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Une compilation peut échouer parce qu’un test ou une analyse précédente a déjà révélé le vrai problème.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e53',
+        question: 'Première étape face à une CI rouge ?',
+        options: [
+          'Identifier le job en échec',
+          'Fusionner quand même',
+          'Supprimer les tests',
+        ],
+        answer: 0,
+        explanation: 'Le job et son journal localisent la source du problème.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'release-notes',
+    level: 7,
+    title: 'Écrire des notes de version',
+    subtitle: 'Expliquer la valeur livrée',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Les notes de version regroupent nouveautés, corrections, changements incompatibles et éventuelles étapes de migration.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Écris pour les utilisateurs du projet : décris les effets visibles plutôt qu’une simple liste d’identifiants de commits.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e54',
+        question: 'Que faut-il signaler clairement dans une release ?',
+        options: [
+          'Les ruptures incompatibles',
+          'Les secrets CI',
+          'Les fichiers ignorés locaux',
+        ],
+        answer: 0,
+        explanation:
+            'Les utilisateurs doivent pouvoir anticiper une migration.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'repository-hygiene',
+    level: 7,
+    title: 'Entretenir un dépôt durable',
+    subtitle: 'Réduire le bruit et la dette collective',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un dépôt sain possède un README actuel, des branches courtes, des releases identifiables et des automatisations reproductibles.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Archive les décisions importantes dans le dépôt et supprime régulièrement les branches déjà fusionnées.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e55',
+        question: 'Quel élément favorise un dépôt durable ?',
+        options: [
+          'Un README à jour',
+          'Des branches éternelles',
+          'Des secrets committés',
+        ],
+        answer: 0,
+        explanation:
+            'La documentation maintenue réduit la dépendance à la mémoire orale.',
+      ),
+    ],
+  ),
 ];
 
 const achievements = <Achievement>[
@@ -897,6 +1435,12 @@ const achievements = <Achievement>[
     'Sommet Git',
     'Terminer vingt leçons',
     Icons.landscape_rounded,
+  ),
+  Achievement(
+    'forty_lessons',
+    'Maître du parcours',
+    'Terminer les quarante leçons',
+    Icons.workspace_premium_rounded,
   ),
   Achievement(
     'issue_author',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/storage/local_progress_store.dart';
 import '../core/storage/virtual_repository_store.dart';
+import '../core/notifications/reminder_service.dart';
 import '../features/collaboration/data/collaboration_store.dart';
 import '../features/projects/data/project_progress_store.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -18,6 +19,7 @@ class GitQuestApp extends StatefulWidget {
     this.repositoryStore,
     this.collaborationStore,
     this.projectProgressStore,
+    this.reminderScheduler,
     super.key,
   });
 
@@ -26,6 +28,7 @@ class GitQuestApp extends StatefulWidget {
   final VirtualRepositoryStore? repositoryStore;
   final CollaborationStore? collaborationStore;
   final ProjectProgressStore? projectProgressStore;
+  final ReminderScheduler? reminderScheduler;
 
   @override
   State<GitQuestApp> createState() => _GitQuestAppState();
@@ -58,6 +61,7 @@ class _GitQuestAppState extends State<GitQuestApp> {
         engine: engine,
         collaborationStore: collaborationStore,
         projectProgressStore: projectProgressStore,
+        reminderScheduler: widget.reminderScheduler,
         child: MaterialApp(
           title: 'GitQuest',
           debugShowCheckedModeBanner: false,

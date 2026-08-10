@@ -1,5 +1,6 @@
 import '../../core/models/learning_models.dart';
 import '../../features/terminal/domain/virtual_repository.dart';
+import 'professional_missions.dart';
 
 final missions = <Mission>[
   Mission(
@@ -363,6 +364,7 @@ final missions = <Mission>[
           repo.commandHistory.any((command) => command.startsWith('git push'));
     },
   ),
+  ...professionalMissions,
 ];
 
 extension LastOrNull<T> on List<T> {

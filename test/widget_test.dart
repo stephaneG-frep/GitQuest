@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gitquest/app/app.dart';
 import 'package:gitquest/app/app_scope.dart';
 import 'package:gitquest/core/storage/local_progress_store.dart';
+import 'package:gitquest/core/notifications/reminder_service.dart';
 import 'package:gitquest/features/profile/profile_screen.dart';
 import 'package:gitquest/features/projects/data/project_progress_store.dart';
 import 'package:gitquest/features/projects/presentation/projects_screen.dart';
 import 'package:gitquest/features/search/presentation/global_search_screen.dart';
+import 'package:gitquest/features/settings/settings_screen.dart';
 import 'package:gitquest/features/statistics/presentation/statistics_screen.dart';
 import 'package:gitquest/features/collaboration/data/collaboration_store.dart';
 import 'package:gitquest/features/collaboration/domain/collaboration_models.dart';
@@ -65,6 +67,40 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Badges'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('active un rappel quotidien depuis les paramètres', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+    final scheduler = _FakeReminderScheduler();
+    final repository = VirtualRepository();
+
+    await tester.pumpWidget(
+      AppScope(
+        store: store,
+        repository: repository,
+        engine: GitCommandEngine(repository),
+        collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
+        reminderScheduler: scheduler,
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Rappel quotidien'));
+    await tester.tap(find.text('Rappel quotidien'));
+    await tester.pumpAndSettle();
+
+    expect(store.reminderEnabled, isTrue);
+    expect(scheduler.permissionRequested, isTrue);
+    expect(scheduler.scheduledAt, (19, 0));
     expect(tester.takeException(), isNull);
   });
 
@@ -366,4 +402,23 @@ void main() {
     expect(find.text('git reset --soft HEAD~1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _FakeReminderScheduler implements ReminderScheduler {
+  bool permissionRequested = false;
+  (int, int)? scheduledAt;
+
+  @override
+  Future<void> cancel() async {}
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequested = true;
+    return true;
+  }
+
+  @override
+  Future<void> scheduleDaily({required int hour, required int minute}) async {
+    scheduledAt = (hour, minute);
+  }
 }
