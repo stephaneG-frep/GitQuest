@@ -32,6 +32,8 @@
 - Ajout de la protection persistante de `main` avec approbation et contrôles obligatoires.
 - Ajout d’une CI simulée par pull request : analyse statique, tests et compilation Android.
 - Invalidation automatique de la CI lorsqu’un nouveau commit est détecté.
+- Correction du bouton « Voir le dépôt » qui recouvrait « Exécuter » dans le terminal mobile.
+- Ajout d’un accès au dépôt dans la barre supérieure et d’un bouton explicite pour fermer son panneau.
 
 ## 1.0.0 — 2026-08-03
 

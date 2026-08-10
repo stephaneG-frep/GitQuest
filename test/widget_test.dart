@@ -196,6 +196,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('le terminal exécute une commande avec Entrée et le bouton', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+    final repository = VirtualRepository();
+
+    await tester.pumpWidget(
+      AppScope(
+        store: store,
+        repository: repository,
+        engine: GitCommandEngine(repository),
+        collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
+        child: const MaterialApp(home: TerminalScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'git init');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dépôt Git vide initialisé'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'git status');
+    await tester.tap(find.byTooltip('Exécuter'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Sur la branche main'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('le terminal tient dans le shell du Honor en paysage', (
     tester,
   ) async {

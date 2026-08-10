@@ -97,6 +97,12 @@ class _TerminalScreenState extends State<TerminalScreen> {
       title: widget.embeddedMissionTitle ?? 'Terminal',
       hideAppBarWithKeyboard: true,
       actions: [
+        if (!wide)
+          IconButton(
+            tooltip: 'Voir le dépôt',
+            onPressed: () => _showRepository(repository),
+            icon: const Icon(Icons.account_tree_rounded),
+          ),
         IconButton(
           tooltip: 'Copier la session',
           onPressed: () {
@@ -123,32 +129,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
           icon: const Icon(Icons.restart_alt_rounded),
         ),
       ],
-      floatingActionButton: wide
-          ? null
-          : FloatingActionButton.small(
-              tooltip: 'Voir le dépôt',
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => StatefulBuilder(
-                  builder: (context, setSheetState) => FractionallySizedBox(
-                    heightFactor: .78,
-                    child: RepositoryPanel(
-                      repository: repository,
-                      onCommand: (command) {
-                        _runPreset(command);
-                        setSheetState(() {});
-                      },
-                      onEditConflict: (conflict) async {
-                        await _editConflict(conflict);
-                        setSheetState(() {});
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              child: const Icon(Icons.account_tree_rounded),
-            ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
         child: wide
@@ -361,6 +341,33 @@ class _TerminalScreenState extends State<TerminalScreen> {
     execute();
   }
 
+  Future<void> _showRepository(VirtualRepository repository) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => FractionallySizedBox(
+          heightFactor: .78,
+          child: RepositoryPanel(
+            repository: repository,
+            onClose: () => Navigator.pop(sheetContext),
+            onCommand: (command) {
+              _runPreset(command);
+              setSheetState(() {});
+            },
+            onEditConflict: (conflict) async {
+              await _editConflict(conflict);
+              setSheetState(() {});
+            },
+          ),
+        ),
+      ),
+    );
+    if (mounted) focusNode.requestFocus();
+  }
+
   Future<void> _editConflict(MergeConflict conflict) async {
     final controller = TextEditingController(
       text: AppScope.of(context).repository.files[conflict.path]?.content ?? '',
@@ -521,11 +528,13 @@ class RepositoryPanel extends StatelessWidget {
     required this.repository,
     this.onCommand,
     this.onEditConflict,
+    this.onClose,
     super.key,
   });
   final VirtualRepository repository;
   final ValueChanged<String>? onCommand;
   final Future<void> Function(MergeConflict)? onEditConflict;
+  final VoidCallback? onClose;
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
@@ -555,6 +564,14 @@ class RepositoryPanel extends StatelessWidget {
                 ),
                 label: Text(repository.currentBranch),
               ),
+              if (onClose != null) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                  tooltip: 'Fermer le dépôt',
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
             ],
           ),
         ),
