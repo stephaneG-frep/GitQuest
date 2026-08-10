@@ -24,9 +24,37 @@ class GitCommandEngine {
   CommandResult execute(String input) {
     final result = _execute(input);
     if (input.trim().isNotEmpty) {
+      _recordResult(input, result);
       onChanged?.call(repository);
     }
     return result;
+  }
+
+  void _recordResult(String input, CommandResult result) {
+    final args = _tokenize(input.trim());
+    if (args.isEmpty) return;
+    final command = args.first == 'git' && args.length > 1
+        ? 'git ${args[1]}'
+        : args.first;
+    if (result.isSuccess) {
+      repository.successfulCommands += 1;
+      if (repository.pendingCommandErrors.remove(command)) {
+        repository.correctedErrors += 1;
+      }
+    } else {
+      repository.commandErrors += 1;
+      repository.pendingCommandErrors.add(command);
+    }
+    final now = DateTime.now();
+    final date =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    repository.dailyCommands.update(
+      date,
+      (value) => value + 1,
+      ifAbsent: () => 1,
+    );
   }
 
   CommandResult _execute(String input) {

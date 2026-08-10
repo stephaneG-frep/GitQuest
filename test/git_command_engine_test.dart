@@ -50,6 +50,18 @@ void main() {
       expect(result.text, contains('git add'));
     });
 
+    test('compte les réussites, erreurs et corrections', () {
+      engine.execute('git init');
+      expect(engine.execute('git add').isSuccess, isFalse);
+      expect(engine.execute('git add README.md').isSuccess, isTrue);
+
+      expect(repository.commandHistory, hasLength(3));
+      expect(repository.successfulCommands, 2);
+      expect(repository.commandErrors, 1);
+      expect(repository.correctedErrors, 1);
+      expect(repository.dailyCommands.values.single, 3);
+    });
+
     test('remplace le dernier commit avec amend', () {
       engine.execute('git init');
       engine.execute('git add .');

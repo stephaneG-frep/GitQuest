@@ -26,6 +26,8 @@ void main() {
     expect(restored.tags, containsPair('v1.0.0', restored.head!.id));
     expect(restored.remotes, contains('origin'));
     expect(restored.commandHistory, contains('git tag v1.0.0'));
+    expect(restored.successfulCommands, repository.successfulCommands);
+    expect(restored.dailyCommands, repository.dailyCommands);
   });
 
   test('conserve une fusion conflictuelle en cours', () async {

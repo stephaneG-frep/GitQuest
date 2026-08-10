@@ -15,11 +15,15 @@ class LocalProgressStore extends ChangeNotifier {
   int dailyGoal = 10;
   int xp = 0;
   int streak = 1;
+  int bestStreak = 1;
+  String? lastActivityDate;
   final Set<String> completedLessons = <String>{};
   final Set<String> completedMissions = <String>{};
   final Set<String> unlockedAchievements = <String>{};
   final Set<String> favoriteCommands = <String>{};
   final Set<String> rewardedEvents = <String>{};
+  final Map<String, int> dailyActivity = <String, int>{};
+  final Map<String, int> dailyXp = <String, int>{};
 
   Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
@@ -36,7 +40,13 @@ class LocalProgressStore extends ChangeNotifier {
     'formatVersion': 1,
     'appVersion': '1.0.0',
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
-    'profile': <String, dynamic>{'name': name, 'xp': xp, 'streak': streak},
+    'profile': <String, dynamic>{
+      'name': name,
+      'xp': xp,
+      'streak': streak,
+      'bestStreak': bestStreak,
+      'lastActivityDate': lastActivityDate,
+    },
     'settings': <String, dynamic>{
       'theme': themePreference.name,
       'textScale': textScale,
@@ -49,6 +59,8 @@ class LocalProgressStore extends ChangeNotifier {
       'achievements': unlockedAchievements.toList(),
       'favorites': favoriteCommands.toList(),
       'rewardedEvents': rewardedEvents.toList(),
+      'dailyActivity': dailyActivity,
+      'dailyXp': dailyXp,
     },
   };
 
@@ -79,6 +91,8 @@ class LocalProgressStore extends ChangeNotifier {
     name = profile['name'] as String? ?? name;
     xp = profile['xp'] as int? ?? xp;
     streak = profile['streak'] as int? ?? streak;
+    bestStreak = profile['bestStreak'] as int? ?? streak;
+    lastActivityDate = profile['lastActivityDate'] as String?;
     themePreference =
         ThemePreference.values
             .where((value) => value.name == settings['theme'])
@@ -92,12 +106,23 @@ class LocalProgressStore extends ChangeNotifier {
     _replace(unlockedAchievements, progress['achievements']);
     _replace(favoriteCommands, progress['favorites']);
     _replace(rewardedEvents, progress['rewardedEvents']);
+    _replaceIntMap(dailyActivity, progress['dailyActivity']);
+    _replaceIntMap(dailyXp, progress['dailyXp']);
   }
 
   void _replace(Set<String> target, Object? values) {
     target
       ..clear()
       ..addAll((values as List<dynamic>? ?? <dynamic>[]).whereType<String>());
+  }
+
+  void _replaceIntMap(Map<String, int> target, Object? values) {
+    target.clear();
+    if (values case final Map<String, dynamic> map) {
+      target.addAll(
+        map.map((key, value) => MapEntry(key, (value as num).toInt())),
+      );
+    }
   }
 
   Future<void> save() async {
@@ -118,6 +143,7 @@ class LocalProgressStore extends ChangeNotifier {
   Future<void> completeLesson(String id) async {
     if (completedLessons.add(id)) {
       xp += 50;
+      _recordActivity(50);
       unlockedAchievements.add('first_step');
       if (completedLessons.length >= 5) {
         unlockedAchievements.add('five_lessons');
@@ -129,6 +155,7 @@ class LocalProgressStore extends ChangeNotifier {
   Future<void> completeMission(String id, int reward) async {
     if (completedMissions.add(id)) {
       xp += reward;
+      _recordActivity(reward);
       await _changed();
     }
   }
@@ -140,6 +167,7 @@ class LocalProgressStore extends ChangeNotifier {
   Future<void> rewardEvent(String eventId, int amount) async {
     if (rewardedEvents.add(eventId)) {
       xp += amount;
+      _recordActivity(amount);
       await _changed();
     }
   }
@@ -174,13 +202,45 @@ class LocalProgressStore extends ChangeNotifier {
     dailyGoal = 10;
     xp = 0;
     streak = 1;
+    bestStreak = 1;
+    lastActivityDate = null;
     completedLessons.clear();
     completedMissions.clear();
     unlockedAchievements.clear();
     favoriteCommands.clear();
     rewardedEvents.clear();
+    dailyActivity.clear();
+    dailyXp.clear();
     await _changed();
   }
+
+  void _recordActivity(int earnedXp) {
+    final now = DateTime.now();
+    final today = _dateKey(now);
+    if (lastActivityDate != today) {
+      final previous = lastActivityDate == null
+          ? null
+          : DateTime.tryParse(lastActivityDate!);
+      if (previous != null && now.difference(previous).inDays == 1) {
+        streak += 1;
+      } else if (previous != null) {
+        streak = 1;
+      }
+      lastActivityDate = today;
+      if (streak > bestStreak) bestStreak = streak;
+    }
+    dailyActivity.update(today, (value) => value + 1, ifAbsent: () => 1);
+    dailyXp.update(
+      today,
+      (value) => value + earnedXp,
+      ifAbsent: () => earnedXp,
+    );
+  }
+
+  String _dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> _changed() async {
     notifyListeners();

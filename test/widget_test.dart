@@ -6,6 +6,7 @@ import 'package:gitquest/core/storage/local_progress_store.dart';
 import 'package:gitquest/features/profile/profile_screen.dart';
 import 'package:gitquest/features/projects/data/project_progress_store.dart';
 import 'package:gitquest/features/projects/presentation/projects_screen.dart';
+import 'package:gitquest/features/statistics/presentation/statistics_screen.dart';
 import 'package:gitquest/features/collaboration/data/collaboration_store.dart';
 import 'package:gitquest/features/collaboration/presentation/collaboration_screen.dart';
 import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
@@ -55,6 +56,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Badges'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Badges'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -196,5 +202,36 @@ void main() {
     expect(find.text('Assistant'), findsOneWidget);
     expect(find.text('Créer un nouveau dépôt'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('les statistiques restent lisibles sur le Honor', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+    final repository = VirtualRepository();
+
+    await tester.pumpWidget(
+      AppScope(
+        store: store,
+        repository: repository,
+        engine: GitCommandEngine(repository),
+        collaborationStore: CollaborationStore(),
+        projectProgressStore: ProjectProgressStore(),
+        child: const MaterialApp(home: StatisticsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Statistiques'), findsOneWidget);
+    expect(find.text('Vue d’ensemble'), findsOneWidget);
+    final exception = tester.takeException();
+    expect(
+      exception,
+      isNull,
+      reason: exception is FlutterError ? exception.toStringDeep() : null,
+    );
   });
 }

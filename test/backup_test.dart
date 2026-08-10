@@ -28,4 +28,24 @@ void main() {
     final store = LocalProgressStore();
     expect(await store.importJson('{"formatVersion": 99}'), isNotNull);
   });
+
+  test(
+    'enregistre l’activité quotidienne et le meilleur enchaînement',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = LocalProgressStore();
+
+      await store.completeLesson('versioning');
+      await store.completeMission('first-repo', 120);
+
+      expect(store.dailyActivity.values.single, 2);
+      expect(store.dailyXp.values.single, 170);
+      expect(store.bestStreak, greaterThanOrEqualTo(store.streak));
+
+      final restored = LocalProgressStore();
+      await restored.load();
+      expect(restored.dailyActivity, store.dailyActivity);
+      expect(restored.dailyXp, store.dailyXp);
+    },
+  );
 }

@@ -77,6 +77,11 @@ class VirtualRepository {
   final Set<String> mergedBranches = <String>{};
   final List<Map<String, String>> stashes = <Map<String, String>>[];
   final List<String> commandHistory = <String>[];
+  int successfulCommands = 0;
+  int commandErrors = 0;
+  int correctedErrors = 0;
+  final Set<String> pendingCommandErrors = <String>{};
+  final Map<String, int> dailyCommands = <String, int>{};
   final List<String> reflog = <String>[];
   final Map<String, MergeConflict> conflicts = <String, MergeConflict>{};
   String? pendingMergeBranch;
@@ -182,6 +187,11 @@ class VirtualRepository {
     'mergedBranches': mergedBranches.toList(),
     'stashes': stashes,
     'commandHistory': commandHistory,
+    'successfulCommands': successfulCommands,
+    'commandErrors': commandErrors,
+    'correctedErrors': correctedErrors,
+    'pendingCommandErrors': pendingCommandErrors.toList(),
+    'dailyCommands': dailyCommands,
     'reflog': reflog,
     'pendingMergeBranch': pendingMergeBranch,
     'conflicts': conflicts.map(
@@ -267,6 +277,19 @@ class VirtualRepository {
       (json['commandHistory'] as List<dynamic>? ?? <dynamic>[])
           .whereType<String>(),
     );
+    repository
+      ..successfulCommands =
+          json['successfulCommands'] as int? ?? repository.commandHistory.length
+      ..commandErrors = json['commandErrors'] as int? ?? 0
+      ..correctedErrors = json['correctedErrors'] as int? ?? 0;
+    repository.pendingCommandErrors.addAll(
+      (json['pendingCommandErrors'] as List<dynamic>? ?? <dynamic>[])
+          .whereType<String>(),
+    );
+    repository.dailyCommands.addAll(
+      (json['dailyCommands'] as Map<String, dynamic>? ?? <String, dynamic>{})
+          .map((key, value) => MapEntry(key, (value as num).toInt())),
+    );
     repository.reflog.addAll(
       (json['reflog'] as List<dynamic>? ?? <dynamic>[]).whereType<String>(),
     );
@@ -328,6 +351,11 @@ class VirtualRepository {
     mergedBranches.clear();
     stashes.clear();
     commandHistory.clear();
+    successfulCommands = 0;
+    commandErrors = 0;
+    correctedErrors = 0;
+    pendingCommandErrors.clear();
+    dailyCommands.clear();
     reflog.clear();
     conflicts.clear();
     pendingMergeBranch = null;

@@ -20,6 +20,8 @@
 - Correction du terminal en paysage lorsque le clavier du Honor est affiché.
 - Ajout d’une boîte à outils hors connexion avec 30 situations Git, filtres, risques, copie et favoris.
 - Ajout d’un glossaire pédagogique de 30 notions Git et GitHub.
+- Ajout des statistiques détaillées : activité hebdomadaire, séries, progression par thème et commandes fréquentes.
+- Suivi persistant des commandes réussies, erreurs corrigées, activité quotidienne et XP journalier.
 
 ## 1.0.0 — 2026-08-03
 

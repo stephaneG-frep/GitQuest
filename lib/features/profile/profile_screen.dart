@@ -7,6 +7,7 @@ import '../../core/widgets/quest_widgets.dart';
 import '../../data/seed/learning_content.dart';
 import '../projects/data/project_content.dart';
 import '../settings/settings_screen.dart';
+import '../statistics/presentation/statistics_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -18,6 +19,13 @@ class ProfileScreen extends StatelessWidget {
     return ScreenFrame(
       title: 'Profil',
       actions: [
+        IconButton(
+          tooltip: 'Statistiques',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const StatisticsScreen()),
+          ),
+          icon: const Icon(Icons.insights_rounded),
+        ),
         IconButton(
           tooltip: 'Paramètres',
           onPressed: () => Navigator.of(context).push(
@@ -116,6 +124,31 @@ class ProfileScreen extends StatelessWidget {
                 },
               );
             },
+          ),
+          const SizedBox(height: 12),
+          QuestCard(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const StatisticsScreen()),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.insights_rounded, color: AppColors.blue),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Toutes mes statistiques',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      Text('Activité, progression et commandes utilisées'),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded),
+              ],
+            ),
           ),
           const AppSectionHeader('Badges'),
           QuestCard(
