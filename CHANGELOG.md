@@ -36,6 +36,8 @@
 - Ajout d’un accès au dépôt dans la barre supérieure et d’un bouton explicite pour fermer son panneau.
 - Ajout de six leçons pour compléter les niveaux Collaboration GitHub et Maîtrise avancée.
 - Le parcours propose maintenant 16 leçons et 27 exercices, avec le badge « Cap confirmé » à dix leçons.
+- Ajout de quatre leçons professionnelles sur les workflows, les commits conventionnels, SemVer et la sécurité.
+- Les sept niveaux proposent désormais 20 leçons et 35 exercices, avec le badge « Sommet Git » à vingt leçons.
 
 ## 1.0.0 — 2026-08-03
 

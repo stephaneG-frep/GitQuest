@@ -7,14 +7,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('le catalogue contient des identifiants et réponses valides', () {
-    expect(lessons, hasLength(16));
+    expect(lessons, hasLength(20));
     final lessonIds = lessons.map((lesson) => lesson.id).toSet();
     final exercises = lessons.expand((lesson) => lesson.exercises).toList();
     final exerciseIds = exercises.map((exercise) => exercise.id).toSet();
 
     expect(lessonIds, hasLength(lessons.length));
     expect(exerciseIds, hasLength(exercises.length));
-    expect(exercises, hasLength(27));
+    expect(exercises, hasLength(35));
     expect(
       exercises.every(
         (exercise) =>
@@ -22,7 +22,7 @@ void main() {
       ),
       isTrue,
     );
-    for (var level = 1; level <= 6; level++) {
+    for (var level = 1; level <= 7; level++) {
       expect(
         lessons.where((lesson) => lesson.level == level),
         isNotEmpty,
@@ -31,15 +31,16 @@ void main() {
     }
   });
 
-  test('la dixième leçon débloque le badge Cap confirmé', () async {
+  test('les jalons de dix et vingt leçons débloquent leurs badges', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = LocalProgressStore();
 
-    for (final lesson in lessons.take(10)) {
+    for (final lesson in lessons) {
       await store.completeLesson(lesson.id);
     }
 
-    expect(store.completedLessons, hasLength(10));
+    expect(store.completedLessons, hasLength(20));
     expect(store.unlockedAchievements, contains('ten_lessons'));
+    expect(store.unlockedAchievements, contains('twenty_lessons'));
   });
 }

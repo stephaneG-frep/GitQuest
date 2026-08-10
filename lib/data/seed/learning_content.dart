@@ -647,6 +647,194 @@ const lessons = <Lesson>[
       ),
     ],
   ),
+  Lesson(
+    id: 'team-workflows',
+    level: 7,
+    title: 'Choisir un workflow d’équipe',
+    subtitle: 'Organiser les branches sans ralentir le projet',
+    minutes: 12,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'GitHub Flow utilise une branche courte par changement, une pull request, des contrôles, puis une fusion rapide vers main.',
+      ),
+      LessonBlock(
+        LessonBlockType.analogy,
+        'Le workflow est le code de la route de l’équipe : il ne produit pas le travail, mais évite les collisions.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Choisis des noms explicites comme feature/profil ou fix/contraste et supprime les branches intégrées devenues inutiles.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Les branches très longues accumulent les divergences et rendent les revues comme les fusions plus difficiles.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e28',
+        question: 'Quel enchaînement correspond à GitHub Flow ?',
+        options: [
+          'Branche → pull request → contrôles → fusion',
+          'Tag → suppression du dépôt',
+          'Commit directement sur main uniquement',
+        ],
+        answer: 0,
+        explanation:
+            'Une branche courte isole le changement jusqu’à sa validation.',
+      ),
+      Exercise(
+        id: 'e29',
+        question: 'Pourquoi préférer des branches courtes ?',
+        options: [
+          'Elles limitent les divergences',
+          'Elles changent le mot de passe',
+          'Elles remplacent les tests',
+        ],
+        answer: 0,
+        explanation:
+            'Des intégrations fréquentes réduisent la taille des conflits et des revues.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'conventional-commits',
+    level: 7,
+    title: 'Écrire des commits conventionnels',
+    subtitle: 'Rendre l’historique lisible et automatisable',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.command,
+        'git commit -m "feat: ajoute le profil"',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git commit -m "fix: corrige le contraste"',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Un préfixe comme feat, fix, docs, test ou refactor indique la nature du changement. Le reste du message décrit son intention.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Le format partagé facilite la génération de notes de version et la recherche dans un historique volumineux.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e30',
+        question: 'Quel message annonce une correction ?',
+        options: ['fix: corrige le menu', 'divers', 'feat: ajoute le menu'],
+        answer: 0,
+        explanation: 'Le type fix signale explicitement une correction.',
+      ),
+      Exercise(
+        id: 'e31',
+        question: 'Quel est l’intérêt principal du préfixe ?',
+        options: [
+          'Identifier la nature du changement',
+          'Chiffrer les fichiers',
+          'Créer une branche distante',
+        ],
+        answer: 0,
+        explanation:
+            'Une convention stable rend l’historique plus facile à lire et exploiter.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'semantic-releases',
+    level: 7,
+    title: 'Livrer une version',
+    subtitle: 'Tags, SemVer et notes de publication',
+    minutes: 12,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Le versionnage sémantique suit MAJEUR.MINEUR.CORRECTIF : rupture incompatible, nouvelle fonctionnalité compatible, puis correction compatible.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git tag v2.1.3'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Une release associe généralement un tag immuable à des notes expliquant les changements utiles pour les utilisateurs.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Crée le tag sur le commit réellement validé par la CI, pas sur une copie de travail encore modifiée.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e32',
+        question: 'Quelle partie augmenter pour une correction compatible ?',
+        options: ['MAJEUR', 'MINEUR', 'CORRECTIF'],
+        answer: 2,
+        explanation:
+            'Dans 2.1.3, le dernier nombre représente le niveau correctif.',
+      ),
+      Exercise(
+        id: 'e33',
+        question: 'À quoi sert un tag de version ?',
+        options: [
+          'Nommer durablement un commit livré',
+          'Modifier tous les fichiers',
+          'Remplacer la CI',
+        ],
+        answer: 0,
+        explanation:
+            'Le tag fournit un repère stable vers l’état exact publié.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'git-security',
+    level: 7,
+    title: 'Protéger secrets et historique',
+    subtitle: 'Prévenir plutôt que nettoyer',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.warning,
+        'Un secret commité reste récupérable dans l’historique même si le fichier est ensuite supprimé. Il faut immédiatement révoquer la clé exposée.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        '.gitignore empêche d’ajouter par erreur les fichiers générés, configurations locales et fichiers de secrets qui ne doivent pas être versionnés.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Utilise des variables d’environnement et le gestionnaire de secrets de la plateforme CI. Active aussi la revue et la protection de branche.',
+      ),
+      LessonBlock(
+        LessonBlockType.analogy,
+        'Supprimer un secret du dernier commit sans le révoquer revient à retirer une clé publiée d’une affiche sans changer la serrure.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e34',
+        question: 'Première action après avoir publié une clé secrète ?',
+        options: ['La révoquer', 'Renommer la branche', 'Créer un tag'],
+        answer: 0,
+        explanation:
+            'La clé doit devenir inutilisable, car des copies peuvent déjà exister.',
+      ),
+      Exercise(
+        id: 'e35',
+        question: 'Où stocker un secret utilisé par la CI ?',
+        options: [
+          'Dans un gestionnaire de secrets',
+          'Dans README.md',
+          'Dans le message du commit',
+        ],
+        answer: 0,
+        explanation:
+            'La plateforme injecte le secret sans l’inscrire dans le dépôt.',
+      ),
+    ],
+  ),
 ];
 
 const achievements = <Achievement>[
@@ -703,6 +891,12 @@ const achievements = <Achievement>[
     'Cap confirmé',
     'Terminer dix leçons',
     Icons.school_rounded,
+  ),
+  Achievement(
+    'twenty_lessons',
+    'Sommet Git',
+    'Terminer vingt leçons',
+    Icons.landscape_rounded,
   ),
   Achievement(
     'issue_author',
