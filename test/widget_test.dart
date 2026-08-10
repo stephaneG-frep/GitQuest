@@ -9,7 +9,9 @@ import 'package:gitquest/features/projects/presentation/projects_screen.dart';
 import 'package:gitquest/features/search/presentation/global_search_screen.dart';
 import 'package:gitquest/features/statistics/presentation/statistics_screen.dart';
 import 'package:gitquest/features/collaboration/data/collaboration_store.dart';
+import 'package:gitquest/features/collaboration/domain/collaboration_models.dart';
 import 'package:gitquest/features/collaboration/presentation/collaboration_screen.dart';
+import 'package:gitquest/features/collaboration/presentation/pull_requests_tab.dart';
 import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
 import 'package:gitquest/features/terminal/domain/virtual_repository.dart';
 import 'package:gitquest/features/terminal/presentation/terminal_screen.dart';
@@ -93,6 +95,68 @@ void main() {
     await tester.tap(find.byTooltip('Issues'));
     await tester.pumpAndSettle();
     expect(find.text('Créer une issue'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('la CI d’une pull request fonctionne sur le Honor', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final progress = LocalProgressStore()..onboardingComplete = true;
+    final repository = VirtualRepository();
+    final engine = GitCommandEngine(repository);
+    engine.execute('git init');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Base"');
+    engine.execute('git switch -c feature/ci');
+    engine.execute('touch ci.md');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Ajoute la CI"');
+    final collaboration = CollaborationStore();
+    await collaboration.load();
+    await collaboration.createPullRequest(
+      title: 'Ajoute la CI',
+      description: 'Vérifie la proposition.',
+      sourceBranch: 'feature/ci',
+      targetBranch: 'main',
+    );
+    final pullRequest = collaboration.pullRequests.single;
+
+    await tester.pumpWidget(
+      AppScope(
+        store: progress,
+        repository: repository,
+        engine: engine,
+        collaborationStore: collaboration,
+        projectProgressStore: ProjectProgressStore(),
+        child: MaterialApp(
+          home: PullRequestDetailScreen(pullRequest: pullRequest),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('Lancer les contrôles CI'),
+      find.byType(ListView),
+      const Offset(0, -250),
+    );
+    await tester.ensureVisible(find.text('Lancer les contrôles CI'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lancer les contrôles CI'));
+    await tester.pump();
+    expect(find.text('CI en cours…'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(pullRequest.checksPassed, isTrue);
+    expect(
+      pullRequest.checks.where((check) => check.status == CheckStatus.success),
+      hasLength(3),
+    );
     expect(tester.takeException(), isNull);
   });
 

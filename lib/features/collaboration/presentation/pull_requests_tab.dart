@@ -25,6 +25,22 @@ class PullRequestsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  QuestCard(
+                    child: SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: store.branchProtectionEnabled,
+                      onChanged: store.setBranchProtection,
+                      secondary: const Icon(Icons.policy_outlined),
+                      title: const Text(
+                        'Protection de main',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: const Text(
+                        'Exige une approbation et une CI réussie avant chaque fusion.',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () => _createPullRequest(context, store),
                     icon: const Icon(Icons.add_rounded),
@@ -257,6 +273,11 @@ class _PullRequestDetailScreenState extends State<PullRequestDetailScreen> {
     final finished =
         widget.pullRequest.status == PullRequestStatus.merged ||
         widget.pullRequest.status == PullRequestStatus.closed;
+    final protectionEnabled = scope.collaborationStore.branchProtectionEnabled;
+    final canMerge = scope.collaborationStore.canMerge(
+      widget.pullRequest,
+      currentCommitId: sourceHead,
+    );
     return Scaffold(
       appBar: AppBar(title: Text('Pull request #${widget.pullRequest.id}')),
       body: ListView(
@@ -333,6 +354,70 @@ class _PullRequestDetailScreenState extends State<PullRequestDetailScreen> {
                             ],
                           ),
                   ),
+                  const AppSectionHeader('Intégration continue'),
+                  QuestCard(
+                    child: Column(
+                      children: [
+                        for (final check in widget.pullRequest.checks)
+                          ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              _checkIcon(check.status),
+                              color: _checkColor(context, check.status),
+                            ),
+                            title: Text(
+                              check.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Text(check.details),
+                          ),
+                        if (widget.pullRequest.checkedCommitId != null &&
+                            widget.pullRequest.checkedCommitId != sourceHead)
+                          const ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.update_rounded,
+                              color: AppColors.orange,
+                            ),
+                            title: Text('Nouveau commit détecté'),
+                            subtitle: Text(
+                              'Relance la CI pour vérifier la dernière version.',
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                finished || widget.pullRequest.checksRunning
+                                ? null
+                                : () => _runChecks(
+                                    sourceHead,
+                                    sourceCommit?.snapshot,
+                                    changedFiles,
+                                  ),
+                            icon: widget.pullRequest.checksRunning
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.play_arrow_rounded),
+                            label: Text(
+                              widget.pullRequest.checksRunning
+                                  ? 'CI en cours…'
+                                  : 'Lancer les contrôles CI',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const AppSectionHeader('Revue de code'),
                   if (!finished)
                     Wrap(
@@ -394,19 +479,15 @@ class _PullRequestDetailScreenState extends State<PullRequestDetailScreen> {
                     ),
                     const SizedBox(height: 18),
                     FilledButton.icon(
-                      onPressed:
-                          widget.pullRequest.status ==
-                              PullRequestStatus.approved
-                          ? _merge
-                          : null,
+                      onPressed: canMerge ? _merge : null,
                       icon: const Icon(Icons.call_merge_rounded),
                       label: const Text('Fusionner la pull request'),
                     ),
-                    if (widget.pullRequest.status != PullRequestStatus.approved)
+                    if (protectionEnabled && !canMerge)
                       const Padding(
                         padding: EdgeInsets.only(top: 7),
                         child: Text(
-                          'Une approbation est nécessaire avant la fusion.',
+                          'La protection de main exige une approbation et tous les contrôles CI au vert.',
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -427,6 +508,31 @@ class _PullRequestDetailScreenState extends State<PullRequestDetailScreen> {
     final progress = AppScope.of(context).store;
     await store.review(widget.pullRequest, status);
     await progress.unlock('reviewer');
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _runChecks(
+    String? sourceHead,
+    Map<String, String>? sourceSnapshot,
+    List<String> changedFiles,
+  ) async {
+    final hasConflictMarkers =
+        sourceSnapshot?.values.any(
+          (content) =>
+              content.contains('<<<<<<<') ||
+              content.contains('=======') ||
+              content.contains('>>>>>>>'),
+        ) ??
+        false;
+    final future = AppScope.of(context).collaborationStore.runChecks(
+      widget.pullRequest,
+      commitId: sourceHead,
+      hasChanges: changedFiles.isNotEmpty,
+      hasConflictMarkers: hasConflictMarkers,
+    );
+    setState(() {});
+    await future;
     if (!mounted) return;
     setState(() {});
   }
@@ -475,6 +581,20 @@ class _PullRequestDetailScreenState extends State<PullRequestDetailScreen> {
     );
   }
 }
+
+IconData _checkIcon(CheckStatus status) => switch (status) {
+  CheckStatus.queued => Icons.schedule_rounded,
+  CheckStatus.running => Icons.sync_rounded,
+  CheckStatus.success => Icons.check_circle_rounded,
+  CheckStatus.failure => Icons.error_rounded,
+};
+
+Color _checkColor(BuildContext context, CheckStatus status) => switch (status) {
+  CheckStatus.queued => Theme.of(context).colorScheme.outline,
+  CheckStatus.running => AppColors.blue,
+  CheckStatus.success => AppColors.green,
+  CheckStatus.failure => Theme.of(context).colorScheme.error,
+};
 
 class _StatusChip extends StatelessWidget {
   const _StatusChip(this.status);

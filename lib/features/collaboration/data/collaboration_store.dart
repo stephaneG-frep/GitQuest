@@ -10,6 +10,7 @@ class CollaborationStore extends ChangeNotifier {
 
   final List<SimulatedIssue> issues = <SimulatedIssue>[];
   final List<SimulatedPullRequest> pullRequests = <SimulatedPullRequest>[];
+  bool branchProtectionEnabled = true;
   int _nextIssueId = 1;
   int _nextPullRequestId = 1;
 
@@ -36,6 +37,8 @@ class CollaborationStore extends ChangeNotifier {
       _nextIssueId = json['nextIssueId'] as int? ?? issues.length + 1;
       _nextPullRequestId =
           json['nextPullRequestId'] as int? ?? pullRequests.length + 1;
+      branchProtectionEnabled =
+          json['branchProtectionEnabled'] as bool? ?? true;
     } on Object catch (e, s) {
       // Invalid local data is replaced with the initial GitHub Lab content.
       debugPrint('Erreur de chargement du CollaborationStore: $e\n$s');
@@ -158,6 +161,63 @@ class CollaborationStore extends ChangeNotifier {
     await _changed();
   }
 
+  Future<void> setBranchProtection(bool enabled) async {
+    branchProtectionEnabled = enabled;
+    await _changed();
+  }
+
+  bool canMerge(
+    SimulatedPullRequest pullRequest, {
+    required String? currentCommitId,
+  }) {
+    if (pullRequest.status == PullRequestStatus.merged ||
+        pullRequest.status == PullRequestStatus.closed) {
+      return false;
+    }
+    if (!branchProtectionEnabled) return true;
+    return pullRequest.status == PullRequestStatus.approved &&
+        pullRequest.checksPassed &&
+        pullRequest.checkedCommitId == currentCommitId;
+  }
+
+  Future<void> runChecks(
+    SimulatedPullRequest pullRequest, {
+    required String? commitId,
+    required bool hasChanges,
+    required bool hasConflictMarkers,
+  }) async {
+    for (final check in pullRequest.checks) {
+      check
+        ..status = CheckStatus.running
+        ..details = 'Contrôle en cours…';
+    }
+    await _changed();
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+
+    final analysis = pullRequest.checks[0];
+    analysis
+      ..status = hasConflictMarkers ? CheckStatus.failure : CheckStatus.success
+      ..details = hasConflictMarkers
+          ? 'Des marqueurs de conflit Git ont été détectés.'
+          : 'Aucune erreur ni marqueur de conflit détecté.';
+    final tests = pullRequest.checks[1];
+    tests
+      ..status = hasChanges ? CheckStatus.success : CheckStatus.failure
+      ..details = hasChanges
+          ? 'La suite de tests simulée est validée.'
+          : 'Aucun changement à tester par rapport à la branche cible.';
+    final build = pullRequest.checks[2];
+    build
+      ..status = hasChanges && !hasConflictMarkers
+          ? CheckStatus.success
+          : CheckStatus.failure
+      ..details = hasChanges && !hasConflictMarkers
+          ? 'L’artefact Android a été construit avec succès.'
+          : 'La compilation est bloquée par l’état de la proposition.';
+    pullRequest.checkedCommitId = commitId;
+    await _changed();
+  }
+
   Future<void> markMerged(SimulatedPullRequest pullRequest) async {
     pullRequest.status = PullRequestStatus.merged;
     if (pullRequest.linkedIssueId case final int issueId) {
@@ -168,9 +228,10 @@ class CollaborationStore extends ChangeNotifier {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'formatVersion': 1,
+    'formatVersion': 2,
     'nextIssueId': _nextIssueId,
     'nextPullRequestId': _nextPullRequestId,
+    'branchProtectionEnabled': branchProtectionEnabled,
     'issues': issues.map((issue) => issue.toJson()).toList(),
     'pullRequests': pullRequests
         .map((pullRequest) => pullRequest.toJson())
@@ -197,6 +258,7 @@ class CollaborationStore extends ChangeNotifier {
     _nextIssueId = json['nextIssueId'] as int? ?? issues.length + 1;
     _nextPullRequestId =
         json['nextPullRequestId'] as int? ?? pullRequests.length + 1;
+    branchProtectionEnabled = json['branchProtectionEnabled'] as bool? ?? true;
     await _changed();
   }
 

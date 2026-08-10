@@ -29,6 +29,9 @@
 - Compatibilité maintenue avec les anciennes sauvegardes JSON de format 1.
 - Ajout du rebase conflictuel persistant avec `--continue` et `--abort`.
 - Ajout d’un résolveur visuel multi-fichiers avec choix des versions et édition libre.
+- Ajout de la protection persistante de `main` avec approbation et contrôles obligatoires.
+- Ajout d’une CI simulée par pull request : analyse statique, tests et compilation Android.
+- Invalidation automatique de la CI lorsqu’un nouveau commit est détecté.
 
 ## 1.0.0 — 2026-08-03
 
