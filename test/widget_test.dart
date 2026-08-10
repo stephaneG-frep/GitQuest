@@ -14,6 +14,7 @@ import 'package:gitquest/features/collaboration/data/collaboration_store.dart';
 import 'package:gitquest/features/collaboration/domain/collaboration_models.dart';
 import 'package:gitquest/features/collaboration/presentation/collaboration_screen.dart';
 import 'package:gitquest/features/collaboration/presentation/pull_requests_tab.dart';
+import 'package:gitquest/features/help/presentation/help_screen.dart';
 import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
 import 'package:gitquest/features/terminal/domain/virtual_repository.dart';
 import 'package:gitquest/features/terminal/presentation/terminal_screen.dart';
@@ -38,6 +39,28 @@ void main() {
     expect(find.text('Accueil'), findsOneWidget);
     expect(find.text('Parcours'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_outlined), findsOneWidget);
+  });
+
+  testWidgets('le mode d’emploi est accessible et lisible sur le Honor', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.physicalSize = const Size(369, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = LocalProgressStore()..onboardingComplete = true;
+
+    await tester.pumpWidget(GitQuestApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mode d’emploi'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HelpScreen), findsOneWidget);
+    expect(find.text('Mode d’emploi'), findsOneWidget);
+    expect(find.text('Démarrage rapide'), findsOneWidget);
+    expect(find.text('Ouvre Parcours'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('le profil tient sur un écran mobile étroit', (tester) async {

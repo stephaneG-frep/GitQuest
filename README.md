@@ -26,6 +26,7 @@ GitQuest est une application Flutter pédagogique, locale et ludique pour appren
 - export/import complet dans un fichier `.gitquest` versionné avec aperçu et fusion ;
 - stockage local avec `SharedPreferences` ;
 - rappel quotidien facultatif, planifié localement à l’heure choisie ;
+- mode d’emploi intégré avec démarrage rapide et guide de chaque espace ;
 - tests du moteur, des sauvegardes et de l’interface principale.
 
 Le terminal ne lance **aucune commande système**. Tout est interprété par `GitCommandEngine` dans un dépôt en mémoire.

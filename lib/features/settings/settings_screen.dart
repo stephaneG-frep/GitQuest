@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../app/app_scope.dart';
 import '../../core/backup/backup_service.dart';
 import '../../core/storage/local_progress_store.dart';
+import '../help/presentation/help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -142,6 +143,22 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () => _reset(context, store),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Aide',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.menu_book_rounded),
+                title: const Text('Mode d’emploi'),
+                subtitle: const Text(
+                  'Démarrage rapide et présentation de chaque espace',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
+                ),
               ),
             ],
           ),

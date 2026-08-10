@@ -5,6 +5,7 @@ import '../../app/theme/app_theme.dart';
 import '../../core/widgets/quest_widgets.dart';
 import '../../data/seed/learning_content.dart';
 import '../collaboration/presentation/collaboration_screen.dart';
+import '../help/presentation/help_screen.dart';
 import '../projects/data/project_content.dart';
 import '../projects/presentation/projects_screen.dart';
 import '../search/presentation/global_search_screen.dart';
@@ -42,12 +43,10 @@ class DashboardScreen extends StatelessWidget {
             icon: const Icon(Icons.search_rounded),
           ),
           IconButton(
-            tooltip: 'Boîte à outils Git',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ToolsScreen(initialIndex: 1),
-              ),
-            ),
+            tooltip: 'Mode d’emploi',
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const HelpScreen())),
             icon: const Icon(Icons.menu_book_rounded),
           ),
           const SizedBox(width: 8),
@@ -300,6 +299,17 @@ class DashboardScreen extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
+                    _Shortcut(
+                      icon: Icons.menu_book_rounded,
+                      title: 'Mode d’emploi',
+                      subtitle: 'Bien démarrer',
+                      color: AppColors.orange,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const HelpScreen(),
+                        ),
+                      ),
+                    ),
                     _Shortcut(
                       icon: Icons.terminal_rounded,
                       title: 'Terminal',

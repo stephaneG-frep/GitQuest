@@ -45,6 +45,7 @@
 - Correction des commits sélectifs : seuls les fichiers préparés entrent désormais dans le snapshot.
 - Ajout d’un rappel quotidien facultatif avec choix de l’heure et persistance locale.
 - Reprogrammation automatique du rappel après redémarrage du téléphone ou mise à jour de l’application.
+- Ajout d’un mode d’emploi complet accessible depuis l’accueil et les paramètres.
 
 ## 1.0.0 — 2026-08-03
 
