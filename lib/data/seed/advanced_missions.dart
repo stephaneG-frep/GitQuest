@@ -2,7 +2,7 @@ import '../../core/models/learning_models.dart';
 import '../../features/terminal/domain/virtual_repository.dart';
 
 /// Missions des notions ajoutées au parcours : clone, rm/mv, suivi distant,
-/// HEAD détachée et regroupement de commits.
+/// HEAD détachée, regroupement de commits, push refusé et bisect.
 final advancedMissions = <Mission>[
   Mission(
     id: 'clone-start',
@@ -74,13 +74,14 @@ final advancedMissions = <Mission>[
     objectives: const [
       'Configurer le dépôt origin',
       'Créer la branche feature/contact',
+      'Y enregistrer un commit',
       'Publier avec suivi',
       'Vérifier avec git branch -vv',
     ],
     hints: const [
       'L’option -u mémorise la branche distante.',
       'git branch -vv affiche la branche suivie entre crochets.',
-      'git remote add origin https://example.com/site.git → git switch -c feature/contact → git push -u origin feature/contact → git branch -vv',
+      'git remote add origin https://example.com/site.git → git switch -c feature/contact → echo "contact" > contact.html → git add . → git commit -m "feat: ajoute le contact" → git push -u origin feature/contact → git branch -vv',
     ],
     xp: 130,
     validator: (dynamic value) {
@@ -177,6 +178,68 @@ final advancedMissions = <Mission>[
           repo.commits.any(
             (commit) => commit.message.toLowerCase().startsWith('wip'),
           );
+    },
+  ),
+  Mission(
+    id: 'rejected-push',
+    title: 'Push refusé',
+    context:
+        'Camille a publié un commit sur main pendant que tu travaillais. Ton push est refusé : intègre son travail, puis publie le tien.',
+    objectives: const [
+      'Publier main avec suivi',
+      'Laisser Camille pousser un commit',
+      'Créer ton propre commit',
+      'Constater le refus du push',
+      'Intégrer puis publier',
+    ],
+    hints: const [
+      'Un push est refusé quand le distant contient des commits absents de ta branche.',
+      'git pull --rebase origin main rejoue ton commit au-dessus de celui de Camille.',
+      'git push -u origin main → gitquest collegue → echo "x" > todo.md → git add . → git commit -m "docs: ajoute la todo" → git push → git pull --rebase origin main → git push',
+    ],
+    xp: 180,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      final main = repo.branches['main'];
+      if (main == null || repo.rejectedPushes == 0) return false;
+      if (repo.serverBranches['origin/main'] != main) return false;
+      final reachable = _ancestors(repo, main);
+      final included = repo.commits.where(
+        (commit) => reachable.contains(commit.id),
+      );
+      return included.any((commit) => commit.author.startsWith('Camille')) &&
+          repo.head?.author.startsWith('Camille') == false;
+    },
+  ),
+  Mission(
+    id: 'find-bug',
+    title: 'Chasse au bug',
+    context:
+        'Un bug s’est glissé dans app.js au fil de plusieurs commits. Retrouve le commit fautif avec git bisect sans tout relire.',
+    objectives: const [
+      'Préparer le scénario',
+      'Lancer la recherche',
+      'Marquer un commit bon et un mauvais',
+      'Identifier le premier commit fautif',
+      'Revenir sur ta branche',
+    ],
+    hints: const [
+      'Le commit actuel est mauvais ; le tag version-saine est bon.',
+      'À chaque étape, affiche app.js : s’il contient le mot bug, réponds git bisect bad, sinon git bisect good.',
+      'gitquest regression → git bisect start → git bisect bad → git bisect good version-saine → cat app.js → git bisect good ou bad… → git bisect reset',
+    ],
+    xp: 200,
+    validator: (dynamic value) {
+      final repo = value as VirtualRepository;
+      final culprit = repo.bisectCulprit == null
+          ? null
+          : repo.commitByReference(repo.bisectCulprit!);
+      if (repo.bisect != null || culprit == null) return false;
+      final parentId = culprit.parentIds.firstOrNull;
+      final parent = parentId == null ? null : repo.commitByReference(parentId);
+      bool hasBug(VirtualCommit? commit) =>
+          commit?.snapshot['app.js']?.contains('bug') ?? false;
+      return hasBug(culprit) && !hasBug(parent);
     },
   ),
 ];

@@ -1,5 +1,20 @@
 # Journal des changements
 
+## Prochaine version
+
+### Dépôt distant simulé
+
+- Le distant possède désormais son propre état : `origin/main` est une copie locale mise à jour par `fetch`, `pull` et `push`.
+- `git status` et `git branch -vv` affichent l’avance, le retard ou la divergence par rapport à la branche suivie.
+- `git push` est refusé en non fast-forward lorsque le distant contient des commits inconnus ; `--force-with-lease` protège un distant non récupéré, `--force` réécrit avec un avertissement.
+- `git pull` fusionne réellement la branche distante, `git pull --rebase` rejoue les commits locaux au-dessus.
+- `git push` sans argument utilise la branche suivie, ou indique la commande `push -u` à utiliser ; une branche sans commit ne peut plus être publiée.
+- `git log --all` affiche les branches distantes.
+- `git bisect start`, `bad`, `good` et `reset` : recherche dichotomique simulée en HEAD détachée.
+- Scénarios d’entraînement : `gitquest collegue` (une collègue publie un commit) et `gitquest regression` (huit commits dont un introduit un bug).
+- 2 nouvelles missions (32 au total) : Push refusé, Chasse au bug.
+- Les missions Dépôt distant, Synchronisation prudente et Livraison professionnelle vérifient désormais une vraie publication sur le distant.
+
 ## 1.2.0 — 2026-11-19
 
 ### Finitions

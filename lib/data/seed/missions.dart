@@ -151,7 +151,7 @@ final missions = <Mission>[
     id: 'remote-repo',
     title: 'Dépôt distant',
     context:
-        'L’équipe t’a transmis une URL. Configure origin, vérifie-la et simule l’envoi de main.',
+        'L’équipe t’a transmis une URL. Configure origin, vérifie-la et publie main, qui doit contenir au moins un commit.',
     objectives: const [
       'Ajouter origin',
       'Lister les remotes',
@@ -160,13 +160,14 @@ final missions = <Mission>[
     hints: const [
       'Un remote relie un nom local à une URL.',
       'Utilise git remote add origin URL.',
-      'git remote add origin https://example.com/team.git → git remote -v → git push -u origin main',
+      'git remote add origin https://example.com/team.git → git remote -v → git push -u origin main (après au moins un commit)',
     ],
     xp: 150,
     validator: (dynamic value) {
       final repo = value as VirtualRepository;
       return repo.remotes.containsKey('origin') &&
-          repo.commandHistory.any((command) => command.startsWith('git push'));
+          repo.serverBranches.containsKey('origin/main') &&
+          repo.commandHistory.contains('git remote -v');
     },
   ),
   Mission(
@@ -303,6 +304,7 @@ final missions = <Mission>[
     xp: 190,
     validator: (dynamic value) {
       final repo = value as VirtualRepository;
+      final main = repo.branches['main'];
       return repo.remotes.containsKey('origin') &&
           repo.commandHistory.any(
             (command) => command.startsWith('git fetch'),
@@ -310,7 +312,8 @@ final missions = <Mission>[
           repo.commandHistory.any(
             (command) => command.startsWith('git pull'),
           ) &&
-          repo.commandHistory.any((command) => command.startsWith('git push'));
+          main != null &&
+          repo.serverBranches['origin/main'] == main;
     },
   ),
   Mission(
@@ -362,7 +365,7 @@ final missions = <Mission>[
           RegExp(r'^(feat|fix): .+').hasMatch(head.message) &&
           repo.tags['v2.0.0'] == head.id &&
           repo.remotes.containsKey('origin') &&
-          repo.commandHistory.any((command) => command.startsWith('git push'));
+          repo.serverBranches.values.contains(head.id);
     },
   ),
   ...professionalMissions,

@@ -88,6 +88,34 @@ class RebaseOperation {
       );
 }
 
+/// An ongoing `git bisect` search.
+class BisectSession {
+  BisectSession({this.returnBranch, this.returnDetached});
+
+  /// Where `git bisect reset` returns: a branch, or a detached commit.
+  final String? returnBranch;
+  final String? returnDetached;
+  String? bad;
+  final List<String> good = <String>[];
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'returnBranch': returnBranch,
+    'returnDetached': returnDetached,
+    'bad': bad,
+    'good': good,
+  };
+
+  factory BisectSession.fromJson(Map<String, dynamic> json) =>
+      BisectSession(
+          returnBranch: json['returnBranch'] as String?,
+          returnDetached: json['returnDetached'] as String?,
+        )
+        ..bad = json['bad'] as String?
+        ..good.addAll(
+          (json['good'] as List<dynamic>? ?? <dynamic>[]).whereType<String>(),
+        );
+}
+
 class VirtualRepository {
   VirtualRepository({this.name = 'atelier'}) {
     files['README.md'] = VirtualFile('README.md', '# Mon aventure GitQuest\n');
@@ -126,6 +154,22 @@ class VirtualRepository {
 
   /// Remote branch followed by each local branch, e.g. main → origin/main.
   final Map<String, String> upstreams = <String, String>{};
+
+  /// Local copies of the remote branches (`origin/main`), updated by fetch,
+  /// pull and push.
+  final Map<String, String> remoteBranches = <String, String>{};
+
+  /// Simulated state of the server itself. Other contributors (see
+  /// `gitquest collegue`) change it without the local repository knowing.
+  final Map<String, String> serverBranches = <String, String>{};
+
+  /// Number of pushes refused because the server had unknown commits.
+  int rejectedPushes = 0;
+
+  BisectSession? bisect;
+
+  /// First faulty commit found by the last bisect search.
+  String? bisectCulprit;
   int _commitSequence = 0;
 
   bool get isDetached => detachedHead != null;
@@ -219,6 +263,26 @@ class VirtualRepository {
     return commit;
   }
 
+  /// Adds a commit without touching HEAD, the index or the working copy.
+  /// Used to simulate work published by someone else.
+  VirtualCommit addForeignCommit({
+    required String message,
+    required String author,
+    required List<String> parentIds,
+    required Map<String, String> snapshot,
+  }) {
+    final commit = VirtualCommit(
+      id: _nextCommitId(),
+      message: message,
+      author: author,
+      createdAt: DateTime.now(),
+      parentIds: parentIds,
+      snapshot: snapshot,
+    );
+    commits.add(commit);
+    return commit;
+  }
+
   VirtualCommit amendHead(String message) {
     final previous = head!;
     final previousIndex = commits.indexOf(previous);
@@ -302,6 +366,11 @@ class VirtualRepository {
     'detachedHead': detachedHead,
     'previousBranch': previousBranch,
     'upstreams': upstreams,
+    'remoteBranches': remoteBranches,
+    'serverBranches': serverBranches,
+    'rejectedPushes': rejectedPushes,
+    'bisect': bisect?.toJson(),
+    'bisectCulprit': bisectCulprit,
     'branches': branches,
     'remotes': remotes,
     'tags': tags,
@@ -379,6 +448,20 @@ class VirtualRepository {
         (key, value) => MapEntry(key, value as String),
       ),
     );
+    repository.remoteBranches.addAll(
+      (json['remoteBranches'] as Map<String, dynamic>? ?? <String, dynamic>{})
+          .map((key, value) => MapEntry(key, value as String)),
+    );
+    repository.serverBranches.addAll(
+      (json['serverBranches'] as Map<String, dynamic>? ?? <String, dynamic>{})
+          .map((key, value) => MapEntry(key, value as String)),
+    );
+    repository
+      ..rejectedPushes = json['rejectedPushes'] as int? ?? 0
+      ..bisectCulprit = json['bisectCulprit'] as String?;
+    if (json['bisect'] case final Map<String, dynamic> bisectJson) {
+      repository.bisect = BisectSession.fromJson(bisectJson);
+    }
     repository.branches
       ..clear()
       ..addAll(
@@ -524,6 +607,11 @@ class VirtualRepository {
     for (final tag in tags.keys.toList()) {
       tags[tag] = resolveLatest(tags[tag]!);
     }
+    for (final refs in <Map<String, String>>[remoteBranches, serverBranches]) {
+      for (final key in refs.keys.toList()) {
+        refs[key] = resolveLatest(refs[key]!);
+      }
+    }
     if (detachedHead case final String id) detachedHead = resolveLatest(id);
     final rebase = pendingRebase;
     if (rebase != null) {
@@ -553,6 +641,15 @@ class VirtualRepository {
       ..addAll(restored.upstreams);
     detachedHead = restored.detachedHead;
     previousBranch = restored.previousBranch;
+    remoteBranches
+      ..clear()
+      ..addAll(restored.remoteBranches);
+    serverBranches
+      ..clear()
+      ..addAll(restored.serverBranches);
+    rejectedPushes = restored.rejectedPushes;
+    bisect = restored.bisect;
+    bisectCulprit = restored.bisectCulprit;
     commits
       ..clear()
       ..addAll(restored.commits);
@@ -603,6 +700,11 @@ class VirtualRepository {
     stagedFiles.clear();
     stagedRemovals.clear();
     upstreams.clear();
+    remoteBranches.clear();
+    serverBranches.clear();
+    rejectedPushes = 0;
+    bisect = null;
+    bisectCulprit = null;
     detachedHead = null;
     previousBranch = null;
     commits.clear();

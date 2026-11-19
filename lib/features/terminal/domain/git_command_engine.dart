@@ -93,6 +93,7 @@ class GitCommandEngine {
     if (args.first == 'cat') return _cat(args);
     if (args.first == 'echo') return _echo(args);
     if (args.first == 'clear') return const CommandResult('__CLEAR__');
+    if (args.first == 'gitquest') return _scenario(args);
     if (args.first != 'git') {
       return CommandResult(
         'Commande inconnue : ${args.first}\nTape “help” pour voir les commandes disponibles.',
@@ -114,6 +115,7 @@ class GitCommandEngine {
     return switch (args[1]) {
       'init' => _init(),
       'clone' => _clone(args),
+      'bisect' => _bisect(args),
       'rm' => _rm(args),
       'mv' => _mv(args),
       'status' => _status(),
@@ -164,6 +166,61 @@ class GitCommandEngine {
     'pull',
   };
 
+  bool _refExists(String name) =>
+      repository.branches.containsKey(name) ||
+      repository.remoteBranches.containsKey(name);
+
+  /// Resolves a branch, a remote branch (origin/main), a tag or a commit.
+  String? _resolveRef(String name) {
+    if (repository.branches.containsKey(name)) {
+      return repository.branches[name];
+    }
+    return repository.remoteBranches[name] ??
+        repository.tags[name] ??
+        (name == 'HEAD' ? repository.headId : null) ??
+        repository.commitByReference(name)?.id;
+  }
+
+  /// Commits reachable from [local] but not [remote], and the reverse.
+  (int, int) _aheadBehind(String? local, String? remote) {
+    final localSet = local == null ? <String>{} : _ancestorIds(local);
+    final remoteSet = remote == null ? <String>{} : _ancestorIds(remote);
+    return (
+      localSet.difference(remoteSet).length,
+      remoteSet.difference(localSet).length,
+    );
+  }
+
+  String _plural(int count, String word) =>
+      '$count $word${count > 1 ? 's' : ''}';
+
+  String _trackingStatus(String branch, String upstream) {
+    final remote = repository.remoteBranches[upstream];
+    if (remote == null) return 'Ta branche suit $upstream.';
+    final (ahead, behind) = _aheadBehind(repository.branches[branch], remote);
+    if (ahead == 0 && behind == 0) {
+      return 'Ta branche suit $upstream et elle est à jour.';
+    }
+    if (behind == 0) {
+      return 'Ta branche suit $upstream : en avance de ${_plural(ahead, 'commit')}.\n  (utilise git push pour publier)';
+    }
+    if (ahead == 0) {
+      return 'Ta branche suit $upstream : en retard de ${_plural(behind, 'commit')}.\n  (utilise git pull pour te mettre à jour)';
+    }
+    return 'Ta branche suit $upstream : elle a divergé, ${_plural(ahead, 'commit')} local(aux) et ${_plural(behind, 'commit')} distant(s).\n  (utilise git pull --rebase, puis git push)';
+  }
+
+  String _trackingLabel(String branch, String upstream) {
+    final remote = repository.remoteBranches[upstream];
+    if (remote == null) return upstream;
+    final (ahead, behind) = _aheadBehind(repository.branches[branch], remote);
+    final parts = <String>[
+      if (ahead > 0) 'ahead $ahead',
+      if (behind > 0) 'behind $behind',
+    ];
+    return parts.isEmpty ? upstream : '$upstream: ${parts.join(', ')}';
+  }
+
   String get _branchLabel =>
       repository.isDetached ? 'HEAD détachée' : repository.currentBranch;
 
@@ -187,6 +244,11 @@ class GitCommandEngine {
   git restore, reset, revert, stash (pop, list), tag, reflog
   git cherry-pick, rebase
   git remote, push, pull, fetch
+  git bisect start, bad, good, reset
+
+Scénarios du laboratoire :
+  gitquest collegue    une collègue pousse un commit sur le distant
+  gitquest regression  prépare un historique contenant un bug
 
 Astuce : commence par git init, puis git status.''');
 
@@ -296,7 +358,7 @@ Astuce : commence par git init, puis git status.''');
         ? null
         : repository.upstreams[repository.currentBranch];
     if (upstream != null) {
-      buffer.writeln('Ta branche suit $upstream.');
+      buffer.writeln(_trackingStatus(repository.currentBranch, upstream));
     }
     if (repository.commits.isEmpty) {
       buffer.writeln('Aucun commit pour le moment');
@@ -505,6 +567,9 @@ Astuce : commence par git init, puis git status.''');
           !repository.isDetached && entry.key == repository.currentBranch;
       add(entry.value, isCurrent ? 'HEAD -> ${entry.key}' : entry.key);
     }
+    for (final entry in repository.remoteBranches.entries) {
+      add(entry.value, entry.key);
+    }
     for (final entry in repository.tags.entries) {
       add(entry.value, 'tag: ${entry.key}');
     }
@@ -605,7 +670,7 @@ Astuce : commence par git init, puis git status.''');
             if (args.length > 2 &&
                 args[2] == '-vv' &&
                 repository.upstreams[name] != null)
-              '[${repository.upstreams[name]}]',
+              '[${_trackingLabel(name, repository.upstreams[name]!)}]',
           ].join(' '),
       ];
       return CommandResult(lines.join('\n'));
@@ -860,7 +925,7 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final source = args[2];
-    if (!repository.branches.containsKey(source)) {
+    if (!_refExists(source)) {
       return CommandResult(
         'Branche inconnue : $source',
         type: TerminalOutputType.error,
@@ -887,7 +952,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    final sourceHeadId = repository.branches[source];
+    final sourceHeadId = _resolveRef(source);
     final currentHeadId = repository.branches[repository.currentBranch];
     if (sourceHeadId == null || sourceHeadId == currentHeadId) {
       repository.mergedBranches.add(source);
@@ -1108,7 +1173,7 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final targetBranch = args[2];
-    if (!repository.branches.containsKey(targetBranch)) {
+    if (!_refExists(targetBranch)) {
       return CommandResult(
         'Branche inconnue : $targetBranch',
         type: TerminalOutputType.error,
@@ -1132,7 +1197,7 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final currentHeadId = repository.branches[repository.currentBranch];
-    final targetHeadId = repository.branches[targetBranch];
+    final targetHeadId = _resolveRef(targetBranch);
     if (currentHeadId == null || targetHeadId == null) {
       return const CommandResult(
         'Les deux branches doivent contenir au moins un commit.',
@@ -1696,41 +1761,150 @@ Astuce : commence par git init, puis git status.''');
         .skip(2)
         .where((arg) => !arg.startsWith('-'))
         .toList();
-    final remote = positional.firstOrNull;
-    if (remote != null && !repository.remotes.containsKey(remote)) {
+    final upstream = repository.isDetached
+        ? null
+        : repository.upstreams[repository.currentBranch];
+    final remote =
+        positional.firstOrNull ??
+        upstream?.split('/').first ??
+        (repository.remotes.containsKey('origin')
+            ? 'origin'
+            : repository.remotes.keys.first);
+    if (!repository.remotes.containsKey(remote)) {
       return CommandResult(
         'Dépôt distant inconnu : $remote\nVérifie la liste avec git remote -v',
         type: TerminalOutputType.error,
       );
     }
-    final setUpstream =
-        args[1] == 'push' &&
-        (args.contains('-u') || args.contains('--set-upstream'));
-    if (setUpstream) {
-      if (remote == null) {
-        return const CommandResult(
-          'Précise le distant et la branche : git push -u origin main',
-          type: TerminalOutputType.error,
-        );
-      }
-      final branch = positional.length > 1
-          ? positional[1]
-          : repository.currentBranch;
-      if (!repository.branches.containsKey(branch)) {
-        return CommandResult(
-          'Branche locale inconnue : $branch',
-          type: TerminalOutputType.error,
-        );
-      }
-      repository.upstreams[branch] = '$remote/$branch';
+    return switch (args[1]) {
+      'fetch' => _fetch(remote),
+      'pull' => _pull(args, remote, positional),
+      _ => _push(args, remote, positional, upstream),
+    };
+  }
+
+  CommandResult _fetch(String remote) {
+    final updates = <String>[];
+    for (final entry in repository.serverBranches.entries) {
+      if (!entry.key.startsWith('$remote/')) continue;
+      final previous = repository.remoteBranches[entry.key];
+      if (previous == entry.value) continue;
+      repository.remoteBranches[entry.key] = entry.value;
+      updates.add(
+        previous == null
+            ? '  * [nouvelle branche] ${entry.key}'
+            : '  $previous..${entry.value}  ${entry.key}',
+      );
+    }
+    if (updates.isEmpty) {
       return CommandResult(
-        'Branche $branch publiée sur $remote.\n$branch suit désormais $remote/$branch : git push et git pull suffiront ensuite.\nAucun accès réseau réel n’a été effectué.',
+        'Rien de nouveau sur $remote : tes références distantes sont à jour.',
         type: TerminalOutputType.success,
       );
     }
     return CommandResult(
-      '${args[1]} simulé avec succès. Aucun accès réseau réel n’a été effectué.',
+      'Depuis ${repository.remotes[remote]} :\n${updates.join('\n')}\nTes fichiers n’ont pas changé. git status indique maintenant ton avance ou ton retard.',
       type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _pull(
+    List<String> args,
+    String remote,
+    List<String> positional,
+  ) {
+    final branch = positional.length > 1
+        ? positional[1]
+        : repository.currentBranch;
+    final fetched = _fetch(remote);
+    final key = '$remote/$branch';
+    if (repository.remoteBranches[key] == null) {
+      return CommandResult(
+        'Le dépôt distant ne contient pas encore de branche $branch.\nPublie-la d’abord avec git push -u $remote $branch.',
+        type: TerminalOutputType.warning,
+      );
+    }
+    final integration = args.contains('--rebase')
+        ? _rebase(<String>['git', 'rebase', key])
+        : _merge(<String>['git', 'merge', key]);
+    return CommandResult(
+      '${fetched.text}\n${integration.text}',
+      type: integration.type,
+    );
+  }
+
+  CommandResult _push(
+    List<String> args,
+    String remote,
+    List<String> positional,
+    String? upstream,
+  ) {
+    final setUpstream = args.contains('-u') || args.contains('--set-upstream');
+    if (positional.isEmpty && upstream == null) {
+      return CommandResult(
+        'La branche ${repository.currentBranch} ne suit encore aucune branche distante.\nPublie-la avec : git push -u $remote ${repository.currentBranch}',
+        type: TerminalOutputType.error,
+      );
+    }
+    final branch = positional.length > 1
+        ? positional[1]
+        : positional.isEmpty
+        ? upstream!.split('/').skip(1).join('/')
+        : repository.currentBranch;
+    if (!repository.branches.containsKey(branch)) {
+      return CommandResult(
+        'Branche locale inconnue : $branch',
+        type: TerminalOutputType.error,
+      );
+    }
+    final local = repository.branches[branch];
+    if (local == null) {
+      return CommandResult(
+        'La branche $branch ne contient encore aucun commit : crée un commit avant de la publier.',
+        type: TerminalOutputType.error,
+      );
+    }
+    final key = '$remote/$branch';
+    final server = repository.serverBranches[key];
+    final force = args.contains('--force') || args.contains('-f');
+    final lease = args.contains('--force-with-lease');
+    var forced = false;
+    if (server != null && server != local && !_isAncestor(server, local)) {
+      if (lease && repository.remoteBranches[key] != server) {
+        repository.rejectedPushes += 1;
+        return CommandResult(
+          '! [rejeté] $branch -> $branch (bail périmé)\n--force-with-lease a protégé le distant : il a changé depuis ta dernière récupération.\nLance git fetch $remote et examine les nouveaux commits avant de décider.',
+          type: TerminalOutputType.error,
+        );
+      }
+      if (!lease && !force) {
+        repository.rejectedPushes += 1;
+        return CommandResult(
+          '! [rejeté] $branch -> $branch (non fast-forward)\nLe dépôt distant contient des commits que tu n’as pas.\nIntègre-les d’abord : git pull --rebase $remote $branch, puis pousse à nouveau.',
+          type: TerminalOutputType.error,
+        );
+      }
+      forced = true;
+    }
+    if (setUpstream) repository.upstreams[branch] = key;
+    final tracking = setUpstream
+        ? '\n$branch suit désormais $key : git push et git pull suffiront ensuite.'
+        : '';
+    if (server == local) {
+      repository.remoteBranches[key] = local;
+      return CommandResult(
+        'Déjà à jour : $key contient déjà ton travail.$tracking',
+        type: TerminalOutputType.success,
+      );
+    }
+    repository.serverBranches[key] = local;
+    repository.remoteBranches[key] = local;
+    final range = server == null
+        ? '* [nouvelle branche] $branch -> $branch'
+        : '$server..$local  $branch -> $branch';
+    return CommandResult(
+      'Vers ${repository.remotes[remote]} :\n  $range$tracking${forced ? '\nAttention : l’historique distant a été réécrit. Préviens les personnes qui travaillent sur cette branche.' : ''}\nAucun accès réseau réel n’a été effectué.',
+      type: forced ? TerminalOutputType.warning : TerminalOutputType.success,
     );
   }
 
@@ -1798,6 +1972,8 @@ Astuce : commence par git init, puis git status.''');
     }
     final commit = repository.createCommit('Initial commit');
     repository.upstreams['main'] = 'origin/main';
+    repository.serverBranches['origin/main'] = commit.id;
+    repository.remoteBranches['origin/main'] = commit.id;
     repository.addReflog('${commit.id} clone: from $url');
     return CommandResult(
       'Clonage dans « $name »...\nRéception des objets : 100 %, terminé.\nLa branche main suit origin/main.\nSimulation : aucun accès réseau réel n’a été effectué.',
@@ -1897,6 +2073,238 @@ Astuce : commence par git init, puis git status.''');
     repository.stagedFiles.add(destination);
     return CommandResult(
       '$source renommé en $destination. Le renommage est préparé pour le prochain commit.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _bisect(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    final action = args.length > 2 ? args[2] : '';
+    final session = repository.bisect;
+    if (action == 'start') {
+      if (session != null) {
+        return const CommandResult(
+          'Une recherche est déjà en cours. Termine-la avec git bisect reset.',
+          type: TerminalOutputType.error,
+        );
+      }
+      if (repository.head == null) {
+        return const CommandResult(
+          'Crée d’abord quelques commits avant de lancer une recherche.',
+          type: TerminalOutputType.error,
+        );
+      }
+      if (repository.hasStagedChanges ||
+          repository.conflicts.isNotEmpty ||
+          repository.files.values.any(
+            (file) => file.state == FileState.modified,
+          )) {
+        return const CommandResult(
+          'La copie de travail doit être propre avant git bisect start.',
+          type: TerminalOutputType.error,
+        );
+      }
+      repository.bisect = BisectSession(
+        returnBranch: repository.isDetached ? null : repository.currentBranch,
+        returnDetached: repository.detachedHead,
+      );
+      return const CommandResult(
+        'Recherche lancée.\nIndique un commit mauvais (git bisect bad) et un commit bon (git bisect good <commit>).',
+        type: TerminalOutputType.success,
+      );
+    }
+    if (session == null) {
+      return const CommandResult(
+        'Aucune recherche en cours. Commence par git bisect start.',
+        type: TerminalOutputType.error,
+      );
+    }
+    switch (action) {
+      case 'reset':
+        repository.bisect = null;
+        final branch = session.returnBranch;
+        if (branch != null && repository.branches.containsKey(branch)) {
+          repository
+            ..detachedHead = null
+            ..currentBranch = branch;
+        } else {
+          repository.detachedHead = session.returnDetached;
+        }
+        repository.checkoutSnapshot(
+          repository.head?.snapshot ?? <String, String>{},
+        );
+        return CommandResult(
+          'Recherche terminée. Retour sur ${repository.headLabel}.',
+          type: TerminalOutputType.success,
+        );
+      case 'bad':
+      case 'good':
+        final reference = args.length > 3 ? args[3] : 'HEAD';
+        final id = _resolveRef(reference);
+        if (id == null) {
+          return CommandResult(
+            'Commit introuvable : $reference',
+            type: TerminalOutputType.error,
+          );
+        }
+        if (action == 'bad') {
+          session.bad = id;
+        } else {
+          session.good.add(id);
+        }
+        return _bisectStep(session);
+      default:
+        return const CommandResult(
+          'Utilise git bisect start, bad, good ou reset.',
+          type: TerminalOutputType.error,
+        );
+    }
+  }
+
+  CommandResult _bisectStep(BisectSession session) {
+    final bad = session.bad;
+    if (bad == null) {
+      return const CommandResult(
+        'Indique maintenant un commit mauvais : git bisect bad',
+      );
+    }
+    if (session.good.isEmpty) {
+      return const CommandResult(
+        'Indique maintenant un commit bon : git bisect good <commit ou tag>',
+      );
+    }
+    final excluded = <String>{
+      for (final good in session.good) ..._ancestorIds(good),
+    };
+    final suspects = _ancestorIds(bad).difference(excluded);
+    final candidates = repository.commits
+        .where((commit) => suspects.contains(commit.id))
+        .toList();
+    if (candidates.isEmpty) {
+      return const CommandResult(
+        'Le commit mauvais est un ancêtre d’un commit bon : vérifie tes réponses, puis recommence avec git bisect reset.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (candidates.length == 1) {
+      final culprit = candidates.single;
+      repository.bisectCulprit = culprit.id;
+      return CommandResult(
+        '${culprit.id} est le premier commit fautif : « ${culprit.message} ».\nExamine-le, puis termine avec git bisect reset.',
+        type: TerminalOutputType.success,
+      );
+    }
+    final next = candidates[(candidates.length - 1) ~/ 2];
+    repository.detachedHead = next.id;
+    repository.checkoutSnapshot(next.snapshot);
+    var steps = 0;
+    for (var left = candidates.length; left > 1; left = (left + 1) ~/ 2) {
+      steps += 1;
+    }
+    return CommandResult(
+      'Bisect : ${_plural(candidates.length, 'commit')} suspect(s), environ ${_plural(steps, 'étape')} restante(s).\nHEAD est sur ${next.id} « ${next.message} ».\nTeste ce commit (par exemple cat app.js), puis réponds git bisect good ou git bisect bad.',
+      type: TerminalOutputType.info,
+    );
+  }
+
+  static const _colleague = 'Camille (collègue)';
+
+  CommandResult _scenario(List<String> args) {
+    final name = args.length > 1 ? args[1] : '';
+    switch (name) {
+      case 'collegue':
+        return _colleaguePush(args);
+      case 'regression':
+        return _regression();
+      default:
+        return const CommandResult(
+          'Scénarios du laboratoire :\n  gitquest collegue [branche]  une collègue pousse un commit sur le distant\n  gitquest regression          prépare un historique contenant un bug à retrouver avec git bisect',
+        );
+    }
+  }
+
+  CommandResult _colleaguePush(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (repository.remotes.isEmpty) {
+      return const CommandResult(
+        'Ajoute d’abord un dépôt distant : git remote add origin URL',
+        type: TerminalOutputType.error,
+      );
+    }
+    final remote = repository.remotes.containsKey('origin')
+        ? 'origin'
+        : repository.remotes.keys.first;
+    final branch = args.length > 2 ? args[2] : 'main';
+    final key = '$remote/$branch';
+    final base = repository.serverBranches[key];
+    if (base == null) {
+      return CommandResult(
+        'Le distant ne contient pas encore la branche $branch.\nPublie-la d’abord : git push -u $remote $branch',
+        type: TerminalOutputType.error,
+      );
+    }
+    final parent = repository.commitByReference(base)!;
+    final notes = parent.snapshot['NOTES-equipe.md'] ?? '# Notes d’équipe\n';
+    final count = repository.commits
+        .where((commit) => commit.author == _colleague)
+        .length;
+    final commit = repository.addForeignCommit(
+      message: 'docs: complète les notes d’équipe (${count + 1})',
+      author: _colleague,
+      parentIds: <String>[base],
+      snapshot: <String, String>{
+        ...parent.snapshot,
+        'NOTES-equipe.md': '$notes- Contribution de Camille n°${count + 1}\n',
+      },
+    );
+    repository.serverBranches[key] = commit.id;
+    return CommandResult(
+      'Camille a poussé ${commit.id} « ${commit.message} » sur $key.\nTon dépôt local ne le sait pas encore : utilise git fetch puis git status.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _regression() {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (repository.isDetached ||
+        repository.bisect != null ||
+        repository.pendingRebase != null ||
+        repository.conflicts.isNotEmpty ||
+        repository.hasStagedChanges ||
+        repository.files.values.any(
+          (file) => file.state == FileState.modified,
+        )) {
+      return const CommandResult(
+        'Place-toi sur une branche avec une copie de travail propre avant de lancer le scénario.',
+        type: TerminalOutputType.error,
+      );
+    }
+    const total = 8;
+    final bugAt = 3 + DateTime.now().microsecond % 4;
+    final lines = <String>['// Calcul du panier'];
+    String? first;
+    for (var step = 1; step <= total; step++) {
+      lines.add('function etape$step() { return $step; }');
+      if (step == bugAt) {
+        lines.add('// bug : le total oublie la livraison');
+      }
+      repository.files['app.js'] = VirtualFile(
+        'app.js',
+        '${lines.join('\n')}\n',
+        state: FileState.staged,
+      );
+      repository.stagedFiles.add('app.js');
+      final commit = repository.createCommit(
+        'feat: étape $step du calcul du panier',
+      );
+      first ??= commit.id;
+    }
+    repository.tags['version-saine'] = first!;
+    return CommandResult(
+      '$total commits ajoutés sur ${repository.currentBranch}.\nLe tag version-saine marque le premier, qui fonctionne. Le dernier contient un bug : app.js contient le mot « bug ».\nRetrouve le commit fautif : git bisect start → git bisect bad → git bisect good version-saine',
       type: TerminalOutputType.success,
     );
   }
