@@ -7,14 +7,21 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('le catalogue contient des identifiants et réponses valides', () {
-    expect(lessons, hasLength(40));
+    expect(lessons, hasLength(58));
     final lessonIds = lessons.map((lesson) => lesson.id).toSet();
     final exercises = lessons.expand((lesson) => lesson.exercises).toList();
     final exerciseIds = exercises.map((exercise) => exercise.id).toSet();
 
     expect(lessonIds, hasLength(lessons.length));
     expect(exerciseIds, hasLength(exercises.length));
-    expect(exercises, hasLength(55));
+    expect(exercises, hasLength(116));
+    for (final lesson in lessons) {
+      expect(
+        lesson.exercises.length,
+        greaterThanOrEqualTo(2),
+        reason: '${lesson.id} doit proposer au moins deux exercices.',
+      );
+    }
     expect(
       exercises.every(
         (exercise) =>
@@ -22,7 +29,7 @@ void main() {
       ),
       isTrue,
     );
-    for (var level = 1; level <= 7; level++) {
+    for (var level = 1; level <= 8; level++) {
       expect(
         lessons.where((lesson) => lesson.level == level),
         isNotEmpty,
@@ -39,9 +46,10 @@ void main() {
       await store.completeLesson(lesson.id);
     }
 
-    expect(store.completedLessons, hasLength(40));
+    expect(store.completedLessons, hasLength(58));
     expect(store.unlockedAchievements, contains('ten_lessons'));
     expect(store.unlockedAchievements, contains('twenty_lessons'));
     expect(store.unlockedAchievements, contains('forty_lessons'));
+    expect(store.unlockedAchievements, contains('fifty_lessons'));
   });
 }

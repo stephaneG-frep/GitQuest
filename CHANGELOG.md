@@ -2,6 +2,22 @@
 
 ## Prochaine version
 
+### Niveau 8 « GitHub en pratique »
+
+- 8 guides pas à pas (58 leçons au total) : créer un jeton d’accès personnel, utiliser son jeton avec Git (credential helper, GitHub CLI), configurer une clé SSH, publier un site avec GitHub Pages, créer son site pseudo.github.io, personnaliser son profil GitHub, automatiser avec GitHub Actions, stocker un secret pour la CI.
+- 16 exercices supplémentaires (116 au total).
+
+### Parcours enrichi
+
+- 10 nouvelles leçons (50 au total) : supprimer et renommer un fichier suivi, lire l’historique en graphe, HEAD détachée, cloner un projet, contribuer avec un fork, s’authentifier auprès de GitHub, push refusé, avance et retard sur le distant, regrouper ses commits, trouver un bug avec bisect.
+- Le niveau « Voyageur distant » passe de 4 à 9 leçons.
+- Chaque leçon propose au moins deux exercices (100 au total).
+- 5 nouvelles missions (30 au total) : Rejoindre un projet, Grand ménage, Publier et suivre, Essai à sauver, Historique présentable.
+- Nouveau badge « Maître du parcours » pour les cinquante leçons ; le badge des quarante leçons devient « Grand explorateur ».
+- Moteur : `git clone`, `git rm` (et `--cached`), `git mv`, `git log --graph` et `--all` avec étiquettes HEAD/branches/tags, HEAD détachée (`switch --detach`, `checkout <commit>`) avec alerte de commit orphelin, `git switch -`, `checkout -b`, `push -u` et `branch -vv`, `reset HEAD~n`.
+- `git log` n’affiche plus que l’historique atteignable depuis HEAD, comme Git ; `git reset` sans référence retire seulement les fichiers préparés.
+- `git status` distingue les fichiers ajoutés (A), modifiés (M) et supprimés (D), et indique la branche suivie.
+
 ### Corrections issues de l’audit
 
 - Identifiants de commit uniques : le 16ᵉ commit ne reprend plus l’identifiant du 1er. Les dépôts existants sont réparés au chargement.

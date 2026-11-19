@@ -9,12 +9,13 @@ GitQuest est une application Flutter pédagogique, locale et ludique pour appren
 - onboarding et profil local ;
 - thème clair, sombre ou système et texte ajustable ;
 - tableau de bord responsive avec XP, rang et série ;
-- 7 niveaux, 40 leçons structurées et 55 exercices ;
+- 8 niveaux, 58 leçons structurées et 116 exercices ;
 - moteur Git indépendant de l’interface ;
 - système de fichiers, index, commits, branches, fusions et rebases conflictuels, stash, remotes, tags, reset, revert, cherry-pick et reflog virtuels ;
+- clone simulé, `git rm` / `git mv`, HEAD détachée, suivi des branches distantes (`push -u`, `branch -vv`) et `log --graph --all` ;
 - terminal sécurisé avec aide, suggestions, historique et corrections pédagogiques ;
 - visualiseur de fichiers, branches, commits et HEAD ;
-- 25 missions à validation d’état et trois niveaux d’indices ;
+- 30 missions à validation d’état et trois niveaux d’indices ;
 - GitHub Lab local avec dépôt distant, issues, pull requests, revues, commentaires et releases ;
 - protection de `main` et pipeline CI simulé avec analyse, tests et compilation ;
 - fusion des pull requests connectée au véritable moteur Git virtuel ;
@@ -22,7 +23,7 @@ GitQuest est une application Flutter pédagogique, locale et ludique pour appren
 - assistant de commandes, aide-mémoire filtrable et glossaire de 30 notions ;
 - statistiques locales avec activité sur sept jours, progression par thème et commandes favorites ;
 - recherche globale dans les leçons, missions, projets, commandes, définitions et erreurs fréquentes ;
-- 12 badges, aide-mémoire et profil ;
+- 13 badges, aide-mémoire et profil ;
 - export/import complet dans un fichier `.gitquest` versionné avec aperçu et fusion ;
 - stockage local avec `SharedPreferences` ;
 - rappel quotidien facultatif, planifié localement à l’heure choisie ;

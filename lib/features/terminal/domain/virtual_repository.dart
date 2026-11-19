@@ -114,7 +114,38 @@ class VirtualRepository {
   final Map<String, MergeConflict> conflicts = <String, MergeConflict>{};
   String? pendingMergeBranch;
   RebaseOperation? pendingRebase;
+
+  /// Commit pointed to directly by HEAD when it is detached from any branch.
+  String? detachedHead;
+
+  /// Branch that `git switch -` returns to.
+  String? previousBranch;
+
+  /// Tracked files removed from the index while kept on disk (`git rm --cached`).
+  final Set<String> stagedRemovals = <String>{};
+
+  /// Remote branch followed by each local branch, e.g. main → origin/main.
+  final Map<String, String> upstreams = <String, String>{};
   int _commitSequence = 0;
+
+  bool get isDetached => detachedHead != null;
+
+  bool get hasStagedChanges =>
+      stagedFiles.isNotEmpty || stagedRemovals.isNotEmpty;
+
+  /// Label shown in the prompt and the repository panel.
+  String get headLabel =>
+      isDetached ? 'HEAD détachée ${detachedHead!}' : currentBranch;
+
+  String? get headId => detachedHead ?? branches[currentBranch];
+
+  void _moveHead(String id) {
+    if (isDetached) {
+      detachedHead = id;
+    } else {
+      branches[currentBranch] = id;
+    }
+  }
 
   static const maxCommandHistory = 1000;
   static const maxReflog = 300;
@@ -145,6 +176,9 @@ class VirtualRepository {
         snapshot[path] = file.content;
       }
     }
+    for (final path in stagedRemovals) {
+      snapshot.remove(path);
+    }
     return snapshot;
   }
 
@@ -171,19 +205,17 @@ class VirtualRepository {
       author: 'Explorateur GitQuest',
       createdAt: DateTime.now(),
       parentIds:
-          parents ??
-          <String>[
-            if (branches[currentBranch] case final String parent) parent,
-          ],
+          parents ?? <String>[if (headId case final String parent) parent],
       snapshot: snapshot,
     );
     commits.add(commit);
-    branches[currentBranch] = id;
+    _moveHead(id);
     addReflog('$id commit: $message');
     for (final path in stagedFiles) {
       files[path]?.state = FileState.committed;
     }
     stagedFiles.clear();
+    stagedRemovals.clear();
     return commit;
   }
 
@@ -201,11 +233,12 @@ class VirtualRepository {
       snapshot: snapshot,
     );
     commits[previousIndex] = amended;
-    branches[currentBranch] = id;
+    _moveHead(id);
     for (final path in stagedFiles) {
       files[path]?.state = FileState.committed;
     }
     stagedFiles.clear();
+    stagedRemovals.clear();
     addReflog('$id commit (amend): $message');
     return amended;
   }
@@ -244,10 +277,11 @@ class VirtualRepository {
       )
       ..addEntries(untracked.map((file) => MapEntry(file.path, file)));
     stagedFiles.clear();
+    stagedRemovals.clear();
   }
 
   VirtualCommit? get head {
-    final id = branches[currentBranch];
+    final id = headId;
     if (id == null) return null;
     return commits.where((commit) => commit.id == id).firstOrNull;
   }
@@ -264,6 +298,10 @@ class VirtualRepository {
         },
     },
     'stagedFiles': stagedFiles.toList(),
+    'stagedRemovals': stagedRemovals.toList(),
+    'detachedHead': detachedHead,
+    'previousBranch': previousBranch,
+    'upstreams': upstreams,
     'branches': branches,
     'remotes': remotes,
     'tags': tags,
@@ -328,6 +366,18 @@ class VirtualRepository {
     repository.stagedFiles.addAll(
       (json['stagedFiles'] as List<dynamic>? ?? <dynamic>[])
           .whereType<String>(),
+    );
+    repository.stagedRemovals.addAll(
+      (json['stagedRemovals'] as List<dynamic>? ?? <dynamic>[])
+          .whereType<String>(),
+    );
+    repository
+      ..detachedHead = json['detachedHead'] as String?
+      ..previousBranch = json['previousBranch'] as String?;
+    repository.upstreams.addAll(
+      (json['upstreams'] as Map<String, dynamic>? ?? <String, dynamic>{}).map(
+        (key, value) => MapEntry(key, value as String),
+      ),
     );
     repository.branches
       ..clear()
@@ -474,6 +524,7 @@ class VirtualRepository {
     for (final tag in tags.keys.toList()) {
       tags[tag] = resolveLatest(tags[tag]!);
     }
+    if (detachedHead case final String id) detachedHead = resolveLatest(id);
     final rebase = pendingRebase;
     if (rebase != null) {
       pendingRebase = RebaseOperation(
@@ -494,6 +545,14 @@ class VirtualRepository {
     stagedFiles
       ..clear()
       ..addAll(restored.stagedFiles);
+    stagedRemovals
+      ..clear()
+      ..addAll(restored.stagedRemovals);
+    upstreams
+      ..clear()
+      ..addAll(restored.upstreams);
+    detachedHead = restored.detachedHead;
+    previousBranch = restored.previousBranch;
     commits
       ..clear()
       ..addAll(restored.commits);
@@ -542,6 +601,10 @@ class VirtualRepository {
       ..clear()
       ..['README.md'] = VirtualFile('README.md', '# Mon aventure GitQuest\n');
     stagedFiles.clear();
+    stagedRemovals.clear();
+    upstreams.clear();
+    detachedHead = null;
+    previousBranch = null;
     commits.clear();
     branches
       ..clear()

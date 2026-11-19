@@ -105,8 +105,17 @@ class GitCommandEngine {
         type: TerminalOutputType.error,
       );
     }
+    if (repository.isDetached && _blockedWhenDetached.contains(args[1])) {
+      return CommandResult(
+        'HEAD est détachée sur ${repository.detachedHead}.\nCrée d’abord une branche avec git switch -c nom-branche, ou reviens sur une branche avec git switch main.',
+        type: TerminalOutputType.error,
+      );
+    }
     return switch (args[1]) {
       'init' => _init(),
+      'clone' => _clone(args),
+      'rm' => _rm(args),
+      'mv' => _mv(args),
       'status' => _status(),
       'add' => _add(args),
       'commit' => _commit(args),
@@ -144,6 +153,20 @@ class GitCommandEngine {
     };
   }
 
+  static const _blockedWhenDetached = <String>{
+    'merge',
+    'rebase',
+    'reset',
+    'revert',
+    'cherry-pick',
+    'stash',
+    'push',
+    'pull',
+  };
+
+  String get _branchLabel =>
+      repository.isDetached ? 'HEAD détachée' : repository.currentBranch;
+
   List<String> _tokenize(String input) {
     final matches = RegExp(
       r'''[^\s"']+|"([^"]*)"|'([^']*)' ''',
@@ -158,7 +181,8 @@ class GitCommandEngine {
 
   CommandResult _help() => const CommandResult('''Commandes disponibles
   help, clear, pwd, ls, touch, cat, echo
-  git init, status, add, commit, log, diff
+  git init, clone, status, add, commit, log, diff
+  git rm, mv
   git branch, switch, checkout, merge
   git restore, reset, revert, stash (pop, list), tag, reflog
   git cherry-pick, rebase
@@ -252,15 +276,34 @@ Astuce : commence par git init, puis git status.''');
         .where((file) => file.state == FileState.modified)
         .map((file) => file.path)
         .toList();
-    final staged = repository.stagedFiles.toList();
+    final saved = repository.head?.snapshot ?? <String, String>{};
+    final staged = <String>[
+      for (final path in repository.stagedFiles)
+        '${!repository.files.containsKey(path)
+            ? 'D'
+            : saved.containsKey(path)
+            ? 'M'
+            : 'A'}  $path',
+      for (final path in repository.stagedRemovals) 'D  $path',
+    ];
     final conflicted = repository.conflicts.keys.toList();
-    final buffer = StringBuffer('Sur la branche ${repository.currentBranch}\n');
+    final buffer = StringBuffer(
+      repository.isDetached
+          ? 'HEAD détachée sur ${repository.detachedHead}\n'
+          : 'Sur la branche ${repository.currentBranch}\n',
+    );
+    final upstream = repository.isDetached
+        ? null
+        : repository.upstreams[repository.currentBranch];
+    if (upstream != null) {
+      buffer.writeln('Ta branche suit $upstream.');
+    }
     if (repository.commits.isEmpty) {
       buffer.writeln('Aucun commit pour le moment');
     }
     if (staged.isNotEmpty) {
       buffer.writeln(
-        '\nModifications qui seront validées :\n  A  ${staged.join('\n  A  ')}',
+        '\nModifications qui seront validées :\n  ${staged.join('\n  ')}',
       );
     }
     if (conflicted.isNotEmpty) {
@@ -323,6 +366,7 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     for (final path in paths) {
+      repository.stagedRemovals.remove(path);
       repository.stagedFiles.add(path);
       repository.files[path]!.state = FileState.staged;
       repository.conflicts.remove(path);
@@ -359,7 +403,7 @@ Astuce : commence par git init, puis git status.''');
           : repository.head!.message;
       final commit = repository.amendHead(message);
       return CommandResult(
-        '[${repository.currentBranch} ${commit.id}] $message\nLe dernier commit a été remplacé. Son identifiant a changé.',
+        '[$_branchLabel ${commit.id}] $message\nLe dernier commit a été remplacé. Son identifiant a changé.',
         type: TerminalOutputType.success,
       );
     }
@@ -381,7 +425,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    if (repository.stagedFiles.isEmpty) {
+    if (!repository.hasStagedChanges) {
       return const CommandResult(
         'Aucun changement préparé.\nUtilise d’abord git add.',
         type: TerminalOutputType.error,
@@ -404,7 +448,7 @@ Astuce : commence par git init, puis git status.''');
       repository.pendingMergeBranch = null;
     }
     return CommandResult(
-      '[${repository.currentBranch} ${commit.id}] ${commit.message}\n${commit.snapshot.length} fichier(s) enregistré(s).',
+      '[$_branchLabel ${commit.id}] ${commit.message}\n${commit.snapshot.length} fichier(s) enregistré(s).',
       type: TerminalOutputType.success,
     );
   }
@@ -412,35 +456,159 @@ Astuce : commence par git init, puis git status.''');
   CommandResult _log(List<String> args) {
     final error = _requireRepository();
     if (error != null) return error;
-    if (repository.commits.isEmpty) {
+    final all = args.contains('--all');
+    final reachable = all
+        ? repository.commits.map((commit) => commit.id).toSet()
+        : repository.headId == null
+        ? <String>{}
+        : _ancestorIds(repository.headId!);
+    final shown = repository.commits.reversed
+        .where((commit) => reachable.contains(commit.id))
+        .toList();
+    if (shown.isEmpty) {
       return const CommandResult(
         'Aucun commit dans l’historique.',
         type: TerminalOutputType.warning,
       );
     }
+    final decorations = _decorations();
+    String label(VirtualCommit commit) {
+      final refs = decorations[commit.id];
+      return refs == null ? '' : ' (${refs.join(', ')})';
+    }
+
+    if (args.contains('--graph')) {
+      return CommandResult(_graph(shown, label));
+    }
     final compact = args.contains('--oneline');
     return CommandResult(
-      repository.commits.reversed
+      shown
           .map(
             (commit) => compact
-                ? '${commit.id} ${commit.message}'
-                : 'commit ${commit.id}\nAuteur: ${commit.author}\n\n    ${commit.message}',
+                ? '${commit.id}${label(commit)} ${commit.message}'
+                : 'commit ${commit.id}${label(commit)}\nAuteur: ${commit.author}\n\n    ${commit.message}',
           )
           .join('\n${compact ? '' : '\n'}'),
     );
   }
 
+  /// References pointing to each commit: HEAD, branches and tags.
+  Map<String, List<String>> _decorations() {
+    final result = <String, List<String>>{};
+    void add(String? id, String label) {
+      if (id != null) result.putIfAbsent(id, () => <String>[]).add(label);
+    }
+
+    if (repository.isDetached) add(repository.detachedHead, 'HEAD');
+    for (final entry in repository.branches.entries) {
+      final isCurrent =
+          !repository.isDetached && entry.key == repository.currentBranch;
+      add(entry.value, isCurrent ? 'HEAD -> ${entry.key}' : entry.key);
+    }
+    for (final entry in repository.tags.entries) {
+      add(entry.value, 'tag: ${entry.key}');
+    }
+    for (final refs in result.values) {
+      refs.sort((a, b) {
+        int rank(String ref) => ref.startsWith('HEAD')
+            ? 0
+            : ref.startsWith('tag:')
+            ? 2
+            : 1;
+        return rank(a).compareTo(rank(b));
+      });
+    }
+    return result;
+  }
+
+  /// Draws a simplified text graph: one lane per line of development.
+  String _graph(
+    List<VirtualCommit> commits,
+    String Function(VirtualCommit commit) label,
+  ) {
+    final lines = <String>[];
+    final lanes = <String?>[];
+    String row(int? commitLane) => List<String>.generate(
+      lanes.length,
+      (i) => i == commitLane ? '*' : (lanes[i] == null ? ' ' : '|'),
+    ).join(' ').trimRight();
+
+    void trim() {
+      while (lanes.isNotEmpty && lanes.last == null) {
+        lanes.removeLast();
+      }
+    }
+
+    for (final commit in commits) {
+      var lane = lanes.indexOf(commit.id);
+      if (lane < 0) {
+        lane = lanes.indexOf(null);
+        if (lane < 0) {
+          lanes.add(commit.id);
+          lane = lanes.length - 1;
+        } else {
+          lanes[lane] = commit.id;
+        }
+      }
+      // Other lanes waiting for this commit join it here.
+      final joining = <int>[
+        for (var i = lane + 1; i < lanes.length; i++)
+          if (lanes[i] == commit.id) i,
+      ];
+      if (joining.isNotEmpty) {
+        final chars = row(null).padRight(lanes.length * 2).split('');
+        for (final i in joining) {
+          chars[i * 2] = ' ';
+          chars[i * 2 - 1] = '/';
+          lanes[i] = null;
+        }
+        lines.add(chars.join().trimRight());
+        trim();
+      }
+      lines.add('${row(lane)} ${commit.id}${label(commit)} ${commit.message}');
+      lanes[lane] = commit.parentIds.firstOrNull;
+      final extraParents = commit.parentIds.skip(1).toList();
+      for (final parent in extraParents) {
+        if (lanes.contains(parent)) continue;
+        var target = lanes.indexOf(null);
+        if (target < 0 || target < lane) {
+          lanes.add(parent);
+          target = lanes.length - 1;
+        } else {
+          lanes[target] = parent;
+        }
+        final chars = row(null).padRight(lanes.length * 2).split('');
+        chars[target * 2] = ' ';
+        chars[target * 2 - 1] = r'\';
+        lines.add(chars.join().trimRight());
+      }
+      trim();
+    }
+    return lines.join('\n');
+  }
+
   CommandResult _branch(List<String> args) {
     final error = _requireRepository();
     if (error != null) return error;
-    if (args.length == 2) {
-      return CommandResult(
-        repository.branches.keys
-            .map(
-              (name) => '${name == repository.currentBranch ? '*' : ' '} $name',
-            )
-            .join('\n'),
-      );
+    if (args.length == 2 || args[2] == '-v' || args[2] == '-vv') {
+      final verbose = args.length > 2;
+      final lines = <String>[
+        if (repository.isDetached)
+          '* (HEAD détachée sur ${repository.detachedHead})',
+        for (final name in repository.branches.keys)
+          [
+            !repository.isDetached && name == repository.currentBranch
+                ? '*'
+                : ' ',
+            name,
+            if (verbose) repository.branches[name] ?? '(aucun commit)',
+            if (args.length > 2 &&
+                args[2] == '-vv' &&
+                repository.upstreams[name] != null)
+              '[${repository.upstreams[name]}]',
+          ].join(' '),
+      ];
+      return CommandResult(lines.join('\n'));
     }
     if (args[2] == '-d' || args[2] == '-D') {
       if (args.length < 4) {
@@ -449,7 +617,7 @@ Astuce : commence par git init, puis git status.''');
           type: TerminalOutputType.error,
         );
       }
-      if (args[3] == repository.currentBranch) {
+      if (!repository.isDetached && args[3] == repository.currentBranch) {
         return const CommandResult(
           'Impossible de supprimer la branche courante.',
           type: TerminalOutputType.error,
@@ -462,7 +630,7 @@ Astuce : commence par git init, puis git status.''');
         );
       }
       final branchHead = repository.branches[args[3]];
-      final currentHead = repository.branches[repository.currentBranch];
+      final currentHead = repository.headId;
       final merged =
           branchHead == null ||
           (currentHead != null && _isAncestor(branchHead, currentHead));
@@ -473,6 +641,7 @@ Astuce : commence par git init, puis git status.''');
         );
       }
       repository.branches.remove(args[3]);
+      repository.upstreams.remove(args[3]);
       return CommandResult(
         'Branche ${args[3]} supprimée.',
         type: TerminalOutputType.success,
@@ -484,10 +653,20 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    repository.branches[args[2]] =
-        repository.branches[repository.currentBranch];
+    var startId = repository.headId;
+    if (args.length > 3) {
+      final start = repository.commitByReference(args[3]);
+      if (start == null) {
+        return CommandResult(
+          'Commit introuvable : ${args[3]}',
+          type: TerminalOutputType.error,
+        );
+      }
+      startId = start.id;
+    }
+    repository.branches[args[2]] = startId;
     return CommandResult(
-      'Branche ${args[2]} créée.',
+      'Branche ${args[2]} créée${args.length > 3 ? ' sur $startId' : ''}.',
       type: TerminalOutputType.success,
     );
   }
@@ -535,7 +714,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    if (repository.stagedFiles.isNotEmpty ||
+    if (repository.hasStagedChanges ||
         repository.files.values.any(
           (file) => file.state == FileState.modified,
         )) {
@@ -544,8 +723,18 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    if (args[2] == '--detach' || args[2] == '-d') {
+      if (args.length < 4) {
+        return const CommandResult(
+          'Indique le commit à explorer : git switch --detach abc1234',
+          type: TerminalOutputType.error,
+        );
+      }
+      return _detach(args[3]);
+    }
     var targetIndex = 2;
-    if (args[2] == '-c') {
+    var created = false;
+    if (args[2] == '-c' || (args[1] == 'checkout' && args[2] == '-b')) {
       if (args.length < 4) {
         return const CommandResult(
           'Indique le nom de la nouvelle branche.',
@@ -559,26 +748,82 @@ Astuce : commence par git init, puis git status.''');
           type: TerminalOutputType.error,
         );
       }
-      repository.branches[args[targetIndex]] =
-          repository.branches[repository.currentBranch];
+      repository.branches[args[targetIndex]] = repository.headId;
+      created = true;
     }
-    final target = args[targetIndex];
+    var target = args[targetIndex];
+    if (target == '-') {
+      final previous = repository.previousBranch;
+      if (previous == null || !repository.branches.containsKey(previous)) {
+        return const CommandResult(
+          'Aucune branche précédente où revenir.',
+          type: TerminalOutputType.error,
+        );
+      }
+      target = previous;
+    }
     if (!repository.branches.containsKey(target)) {
+      if (repository.commitByReference(target) != null) {
+        if (args[1] == 'checkout') return _detach(target);
+        return CommandResult(
+          '$target est un commit, pas une branche.\nPour l’explorer, utilise git switch --detach $target',
+          type: TerminalOutputType.error,
+        );
+      }
       return CommandResult(
         'Branche inconnue : $target\nCrée-la avec git switch -c $target',
         type: TerminalOutputType.error,
       );
     }
-    repository.currentBranch = target;
+    final orphanWarning = _orphanWarning(target);
+    if (!repository.isDetached && repository.currentBranch != target) {
+      repository.previousBranch = repository.currentBranch;
+    }
+    repository
+      ..detachedHead = null
+      ..currentBranch = target;
     final targetHead = repository.head;
-    if (targetHead != null) {
+    if (targetHead != null && !created) {
       repository.checkoutSnapshot(targetHead.snapshot);
     }
     repository.addReflog('${targetHead?.id ?? '0000000'} checkout: $target');
     return CommandResult(
-      'Basculement sur la branche “$target”.',
-      type: TerminalOutputType.success,
+      '${created ? 'Nouvelle branche' : 'Basculement sur la branche'} “$target”.$orphanWarning',
+      type: orphanWarning.isEmpty
+          ? TerminalOutputType.success
+          : TerminalOutputType.warning,
     );
+  }
+
+  CommandResult _detach(String reference) {
+    final commit = repository.commitByReference(reference);
+    if (commit == null) {
+      return CommandResult(
+        'Commit introuvable : $reference',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (!repository.isDetached) {
+      repository.previousBranch = repository.currentBranch;
+    }
+    repository.detachedHead = commit.id;
+    repository.checkoutSnapshot(commit.snapshot);
+    repository.addReflog('${commit.id} checkout: détachement sur ${commit.id}');
+    return CommandResult(
+      'HEAD est maintenant détachée sur ${commit.id} “${commit.message}”.\nTu peux explorer et faire des essais. Pour garder un commit créé ici, crée une branche : git switch -c nom-branche.\nPour revenir : git switch ${repository.previousBranch ?? 'main'}',
+      type: TerminalOutputType.warning,
+    );
+  }
+
+  /// Warns when leaving a detached HEAD whose commits no branch contains.
+  String _orphanWarning(String targetBranch) {
+    final detached = repository.detachedHead;
+    if (detached == null) return '';
+    final kept = repository.branches.values.whereType<String>().any(
+      (id) => _isAncestor(detached, id),
+    );
+    if (kept) return '';
+    return '\nAttention : le commit $detached n’appartient à aucune branche.\nPour le garder : git branch sauvetage $detached';
   }
 
   CommandResult _merge(List<String> args) {
@@ -633,7 +878,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    if (repository.stagedFiles.isNotEmpty ||
+    if (repository.hasStagedChanges ||
         repository.files.values.any(
           (file) => file.state == FileState.modified,
         )) {
@@ -795,7 +1040,7 @@ Astuce : commence par git init, puis git status.''');
     final commit = repository.createCommit(picked.message);
     repository.addReflog('${commit.id} cherry-pick: ${picked.id}');
     return CommandResult(
-      '[${repository.currentBranch} ${commit.id}] ${commit.message}\nLe changement ${picked.id} a été rejoué sur la branche courante.',
+      '[$_branchLabel ${commit.id}] ${commit.message}\nLe changement ${picked.id} a été rejoué sur la branche courante.',
       type: TerminalOutputType.success,
     );
   }
@@ -875,7 +1120,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    if (repository.stagedFiles.isNotEmpty ||
+    if (repository.hasStagedChanges ||
         repository.files.values.any(
           (file) =>
               file.state != FileState.committed &&
@@ -1069,6 +1314,13 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final path = args.last;
+    if (args.contains('--staged') && repository.stagedRemovals.remove(path)) {
+      repository.files[path]?.state = FileState.committed;
+      return CommandResult(
+        'La suppression de $path a été retirée de la zone de préparation.',
+        type: TerminalOutputType.success,
+      );
+    }
     if (!repository.files.containsKey(path)) {
       return const CommandResult(
         'Fichier introuvable.',
@@ -1120,18 +1372,30 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final reference =
-        args
-            .where(
-              (arg) =>
-                  arg == 'HEAD~1' ||
-                  (!arg.startsWith('-') && arg != 'git' && arg != 'reset'),
-            )
-            .firstOrNull ??
-        'HEAD~1';
+        args.skip(2).where((arg) => !arg.startsWith('-')).firstOrNull ?? 'HEAD';
     VirtualCommit? target;
-    if (reference == 'HEAD~1') {
-      final parentId = repository.head!.parentIds.firstOrNull;
-      target = parentId == null ? null : repository.commitByReference(parentId);
+    final relative = RegExp(r'^HEAD(?:~(\d+)|(\^))?$').firstMatch(reference);
+    if (relative != null) {
+      final steps = relative.group(1) != null
+          ? int.parse(relative.group(1)!)
+          : relative.group(2) != null
+          ? 1
+          : 0;
+      target = repository.head;
+      for (var step = 0; step < steps; step++) {
+        final parentId = target!.parentIds.firstOrNull;
+        if (parentId == null) {
+          if (step == steps - 1) {
+            target = null;
+            break;
+          }
+          return CommandResult(
+            'L’historique ne contient pas assez de commits pour $reference.',
+            type: TerminalOutputType.error,
+          );
+        }
+        target = repository.commitByReference(parentId);
+      }
     } else {
       target = repository.commitByReference(reference);
       if (target == null) {
@@ -1155,6 +1419,7 @@ Astuce : commence par git init, puis git status.''');
       }
     } else if (mode == '--mixed') {
       repository.stagedFiles.clear();
+      repository.stagedRemovals.clear();
       for (final file in repository.files.values) {
         final saved = targetSnapshot[file.path];
         file.state = saved == null
@@ -1207,7 +1472,7 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
-    if (repository.stagedFiles.isNotEmpty ||
+    if (repository.hasStagedChanges ||
         repository.files.values.any(
           (file) => file.state == FileState.modified,
         )) {
@@ -1252,7 +1517,7 @@ Astuce : commence par git init, puis git status.''');
     }
     final commit = repository.createCommit('Annule “${target.message}”');
     return CommandResult(
-      '[${repository.currentBranch} ${commit.id}] ${commit.message}\nUn nouveau commit d’annulation a été créé : l’historique partagé reste intact.',
+      '[$_branchLabel ${commit.id}] ${commit.message}\nUn nouveau commit d’annulation a été créé : l’historique partagé reste intact.',
       type: TerminalOutputType.success,
     );
   }
@@ -1427,8 +1692,211 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    final positional = args
+        .skip(2)
+        .where((arg) => !arg.startsWith('-'))
+        .toList();
+    final remote = positional.firstOrNull;
+    if (remote != null && !repository.remotes.containsKey(remote)) {
+      return CommandResult(
+        'Dépôt distant inconnu : $remote\nVérifie la liste avec git remote -v',
+        type: TerminalOutputType.error,
+      );
+    }
+    final setUpstream =
+        args[1] == 'push' &&
+        (args.contains('-u') || args.contains('--set-upstream'));
+    if (setUpstream) {
+      if (remote == null) {
+        return const CommandResult(
+          'Précise le distant et la branche : git push -u origin main',
+          type: TerminalOutputType.error,
+        );
+      }
+      final branch = positional.length > 1
+          ? positional[1]
+          : repository.currentBranch;
+      if (!repository.branches.containsKey(branch)) {
+        return CommandResult(
+          'Branche locale inconnue : $branch',
+          type: TerminalOutputType.error,
+        );
+      }
+      repository.upstreams[branch] = '$remote/$branch';
+      return CommandResult(
+        'Branche $branch publiée sur $remote.\n$branch suit désormais $remote/$branch : git push et git pull suffiront ensuite.\nAucun accès réseau réel n’a été effectué.',
+        type: TerminalOutputType.success,
+      );
+    }
     return CommandResult(
       '${args[1]} simulé avec succès. Aucun accès réseau réel n’a été effectué.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _clone(List<String> args) {
+    final positional = args
+        .skip(2)
+        .where((arg) => !arg.startsWith('-'))
+        .toList();
+    if (positional.isEmpty) {
+      return const CommandResult(
+        'Indique l’adresse du dépôt : git clone https://github.com/compte/projet.git',
+        type: TerminalOutputType.error,
+      );
+    }
+    final url = positional.first;
+    final segments = url
+        .split(RegExp(r'[/:]'))
+        .where((segment) => segment.isNotEmpty)
+        .toList();
+    if (segments.length < 2) {
+      return CommandResult(
+        'Adresse de dépôt invalide : $url',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.initialized && repository.commits.isNotEmpty) {
+      return const CommandResult(
+        'Le laboratoire contient déjà un dépôt avec un historique.\nRéinitialise-le avec le bouton ↺ du terminal, puis relance git clone.',
+        type: TerminalOutputType.error,
+      );
+    }
+    final name = positional.length > 1
+        ? positional[1]
+        : segments.last.replaceAll(RegExp(r'\.git$'), '');
+    // Cloning replaces the repository but keeps the learner's statistics.
+    final history = List<String>.of(repository.commandHistory);
+    final pendingErrors = Set<String>.of(repository.pendingCommandErrors);
+    final daily = Map<String, int>.of(repository.dailyCommands);
+    final successes = repository.successfulCommands;
+    final errors = repository.commandErrors;
+    final corrected = repository.correctedErrors;
+    repository.reset();
+    repository
+      ..initialized = true
+      ..successfulCommands = successes
+      ..commandErrors = errors
+      ..correctedErrors = corrected
+      ..files.clear();
+    repository.commandHistory.addAll(history);
+    repository.pendingCommandErrors.addAll(pendingErrors);
+    repository.dailyCommands.addAll(daily);
+    repository.remotes['origin'] = url;
+    final starter = <String, String>{
+      'README.md': '# $name\n\nProjet cloné depuis $url.\n',
+      'CONTRIBUTING.md':
+          '# Contribuer\n\nCrée une branche, puis ouvre une pull request.\n',
+    };
+    for (final entry in starter.entries) {
+      repository.files[entry.key] = VirtualFile(
+        entry.key,
+        entry.value,
+        state: FileState.staged,
+      );
+      repository.stagedFiles.add(entry.key);
+    }
+    final commit = repository.createCommit('Initial commit');
+    repository.upstreams['main'] = 'origin/main';
+    repository.addReflog('${commit.id} clone: from $url');
+    return CommandResult(
+      'Clonage dans « $name »...\nRéception des objets : 100 %, terminé.\nLa branche main suit origin/main.\nSimulation : aucun accès réseau réel n’a été effectué.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _rm(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    final cached = args.contains('--cached');
+    final paths = args.skip(2).where((arg) => !arg.startsWith('-')).toList();
+    if (paths.isEmpty) {
+      return const CommandResult(
+        'Indique le fichier à supprimer : git rm brouillon.txt',
+        type: TerminalOutputType.error,
+      );
+    }
+    final saved = repository.head?.snapshot ?? <String, String>{};
+    for (final path in paths) {
+      if (!saved.containsKey(path)) {
+        return CommandResult(
+          '$path n’est pas suivi par Git : il n’y a rien à retirer de l’historique.',
+          type: TerminalOutputType.error,
+        );
+      }
+      final file = repository.files[path];
+      if (!cached && file != null && file.content != saved[path]) {
+        return CommandResult(
+          '$path contient des modifications non enregistrées.\nValide-les, restaure le fichier, ou utilise git rm --cached $path pour le garder sur le disque.',
+          type: TerminalOutputType.error,
+        );
+      }
+    }
+    for (final path in paths) {
+      if (cached) {
+        repository.stagedFiles.remove(path);
+        repository.stagedRemovals.add(path);
+        repository.files[path]?.state = FileState.untracked;
+      } else {
+        repository.files.remove(path);
+        repository.stagedRemovals.remove(path);
+        repository.stagedFiles.add(path);
+      }
+    }
+    return CommandResult(
+      cached
+          ? '${paths.join(', ')} ne sera plus suivi, mais reste sur le disque.\nPense à l’ajouter dans .gitignore.'
+          : 'Suppression de ${paths.join(', ')} préparée. Crée un commit pour l’enregistrer.',
+      type: TerminalOutputType.success,
+    );
+  }
+
+  CommandResult _mv(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (args.length < 4) {
+      return const CommandResult(
+        'Indique l’ancien et le nouveau nom : git mv notes.txt NOTES.md',
+        type: TerminalOutputType.error,
+      );
+    }
+    final source = args[2];
+    final destination = args[3];
+    final file = repository.files[source];
+    if (file == null) {
+      return CommandResult(
+        'Fichier introuvable : $source',
+        type: TerminalOutputType.error,
+      );
+    }
+    final saved = repository.head?.snapshot ?? <String, String>{};
+    if (!saved.containsKey(source) &&
+        !repository.stagedFiles.contains(source)) {
+      return CommandResult(
+        '$source n’est pas suivi par Git. Ajoute-le d’abord avec git add.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.files.containsKey(destination)) {
+      return CommandResult(
+        '$destination existe déjà.',
+        type: TerminalOutputType.error,
+      );
+    }
+    repository.files.remove(source);
+    if (saved.containsKey(source)) {
+      repository.stagedFiles.add(source);
+    } else {
+      repository.stagedFiles.remove(source);
+    }
+    repository.files[destination] = VirtualFile(
+      destination,
+      file.content,
+      state: FileState.staged,
+    );
+    repository.stagedFiles.add(destination);
+    return CommandResult(
+      '$source renommé en $destination. Le renommage est préparé pour le prochain commit.',
       type: TerminalOutputType.success,
     );
   }
