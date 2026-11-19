@@ -196,7 +196,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          '${repository.name} — ${repository.currentBranch}',
+                          '${repository.name} — ${repository.headLabel}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontWeight: FontWeight.w600,
@@ -491,7 +491,7 @@ class _EntryView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'gitquest@academy ~/atelier (${AppScope.of(context).repository.currentBranch})',
+            'gitquest@academy ~/atelier (${AppScope.of(context).repository.headLabel})',
             style: const TextStyle(
               color: Color(0xFF60A5FA),
               fontFamily: 'monospace',
@@ -562,7 +562,7 @@ class RepositoryPanel extends StatelessWidget {
                   size: 10,
                   color: AppColors.green,
                 ),
-                label: Text(repository.currentBranch),
+                label: Text(repository.headLabel),
               ),
               if (onClose != null) ...[
                 const SizedBox(width: 4),

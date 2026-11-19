@@ -86,7 +86,7 @@ class HelpScreen extends StatelessWidget {
                   icon: Icons.route_rounded,
                   color: AppColors.blue,
                   title: 'Parcours et XP',
-                  summary: '40 leçons réparties sur sept niveaux.',
+                  summary: '58 leçons réparties sur huit niveaux.',
                   details:
                       'Chaque leçon présente une notion puis un questionnaire. Réponds une première fois pour voir la correction, corrige si nécessaire, puis termine la leçon pour recevoir 50 XP. Ta progression est enregistrée automatiquement.',
                 ),

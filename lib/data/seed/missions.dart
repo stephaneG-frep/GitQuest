@@ -1,5 +1,6 @@
 import '../../core/models/learning_models.dart';
 import '../../features/terminal/domain/virtual_repository.dart';
+import 'advanced_missions.dart';
 import 'professional_missions.dart';
 
 final missions = <Mission>[
@@ -365,6 +366,7 @@ final missions = <Mission>[
     },
   ),
   ...professionalMissions,
+  ...advancedMissions,
 ];
 
 extension LastOrNull<T> on List<T> {

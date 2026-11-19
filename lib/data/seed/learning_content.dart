@@ -52,6 +52,13 @@ const levels = <LearningLevel>[
     icon: Icons.workspace_premium_rounded,
     color: Color(0xFFF97316),
   ),
+  LearningLevel(
+    number: 8,
+    title: 'GitHub en pratique',
+    description: 'Jetons, SSH, Pages, profil et Actions pas à pas',
+    icon: Icons.rocket_launch_rounded,
+    color: Color(0xFF84CC16),
+  ),
 ];
 
 const lessons = <Lesson>[
@@ -123,6 +130,14 @@ const lessons = <Lesson>[
         explanation:
             'Git est un logiciel local. Un hébergeur distant est facultatif.',
       ),
+      Exercise(
+        id: 'e56',
+        question: 'Quel service héberge des dépôts en ligne pour collaborer ?',
+        options: ['Git', 'GitHub', 'Le terminal'],
+        answer: 1,
+        explanation:
+            'GitHub héberge des dépôts Git et ajoute issues, pull requests et revues.',
+      ),
     ],
   ),
   Lesson(
@@ -154,6 +169,18 @@ const lessons = <Lesson>[
         answer: 1,
         explanation:
             '--global enregistre l’identité par défaut de ton utilisateur.',
+      ),
+      Exercise(
+        id: 'e57',
+        question: 'Pourquoi configurer user.name et user.email ?',
+        options: [
+          'Pour signer chaque commit avec ton identité',
+          'Pour accélérer Git',
+          'Pour se connecter à Internet',
+        ],
+        answer: 0,
+        explanation:
+            'Ces informations sont inscrites dans chaque commit que tu crées.',
       ),
     ],
   ),
@@ -294,6 +321,15 @@ const lessons = <Lesson>[
         answer: 1,
         explanation: '--oneline affiche un commit par ligne.',
       ),
+      Exercise(
+        id: 'e58',
+        question:
+            'Quelle commande affiche l’historique de la branche courante ?',
+        options: ['git status', 'git log', 'git diff'],
+        answer: 1,
+        explanation:
+            'git log liste les commits atteignables depuis HEAD, du plus récent au plus ancien.',
+      ),
     ],
   ),
   Lesson(
@@ -359,6 +395,19 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'La branche courante reçoit les changements.',
       ),
+      Exercise(
+        id: 'e59',
+        question:
+            'Quelle commande intègre feature/profile dans la branche courante ?',
+        options: [
+          'git merge feature/profile',
+          'git switch feature/profile',
+          'git branch feature/profile',
+        ],
+        answer: 0,
+        explanation:
+            'merge intègre l’historique de la branche indiquée dans la branche courante.',
+      ),
     ],
   ),
   Lesson(
@@ -389,6 +438,14 @@ const lessons = <Lesson>[
         ],
         answer: 1,
         explanation: 'origin est un alias local pour une URL distante.',
+      ),
+      Exercise(
+        id: 'e60',
+        question: 'Quelle commande liste les dépôts distants configurés ?',
+        options: ['git remote -v', 'git log --remote', 'git status -r'],
+        answer: 0,
+        explanation:
+            'git remote -v affiche chaque distant avec ses adresses de récupération et d’envoi.',
       ),
     ],
   ),
@@ -856,6 +913,18 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: '.gitignore centralise les motifs ignorés par Git.',
       ),
+      Exercise(
+        id: 'e61',
+        question: 'Lequel n’a généralement pas sa place dans le dépôt ?',
+        options: [
+          'README.md',
+          'Un fichier .env contenant des mots de passe',
+          'Le code source',
+        ],
+        answer: 1,
+        explanation:
+            'Les secrets et fichiers locaux doivent être exclus avec .gitignore.',
+      ),
     ],
   ),
   Lesson(
@@ -880,6 +949,14 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'git status observe sans modifier les fichiers.',
       ),
+      Exercise(
+        id: 'e62',
+        question: 'Quelle commande affiche le dossier courant ?',
+        options: ['ls', 'pwd', 'cat'],
+        answer: 1,
+        explanation:
+            'pwd affiche le chemin du dossier dans lequel tu te trouves.',
+      ),
     ],
   ),
   Lesson(
@@ -902,6 +979,18 @@ const lessons = <Lesson>[
         options: ['Ajoutée', 'Supprimée', 'Ignorée'],
         answer: 0,
         explanation: 'Le signe + représente le contenu ajouté.',
+      ),
+      Exercise(
+        id: 'e63',
+        question: 'Que montre git diff sans option ?',
+        options: [
+          'Les changements non préparés',
+          'Les commits distants',
+          'La liste des branches',
+        ],
+        answer: 0,
+        explanation:
+            'Sans option, git diff compare la copie de travail à la zone de préparation.',
       ),
     ],
   ),
@@ -929,6 +1018,19 @@ const lessons = <Lesson>[
         ],
         answer: 0,
         explanation: 'La commande restaure uniquement le chemin indiqué.',
+      ),
+      Exercise(
+        id: 'e64',
+        question:
+            'Quelle commande retire un fichier de la zone de préparation sans perdre son contenu ?',
+        options: [
+          'git restore --staged fichier',
+          'git reset --hard',
+          'git rm fichier',
+        ],
+        answer: 0,
+        explanation:
+            '--staged agit seulement sur l’index : tes modifications restent dans le fichier.',
       ),
     ],
   ),
@@ -960,6 +1062,19 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'Chaque commit reste compréhensible et réutilisable.',
       ),
+      Exercise(
+        id: 'e65',
+        question:
+            'Tu as corrigé un bug et renommé une variable ailleurs. Que faire ?',
+        options: [
+          'Un seul commit « divers »',
+          'Deux commits séparés',
+          'Ne rien committer',
+        ],
+        answer: 1,
+        explanation:
+            'Deux changements sans rapport méritent deux commits relisibles séparément.',
+      ),
     ],
   ),
   Lesson(
@@ -983,6 +1098,13 @@ const lessons = <Lesson>[
         answer: 2,
         explanation: 'Le nom décrit la nature et l’objectif du travail.',
       ),
+      Exercise(
+        id: 'e66',
+        question: 'Quel préfixe convient à une correction de bug ?',
+        options: ['feature/', 'fix/', 'docs/'],
+        answer: 1,
+        explanation: 'fix/ signale immédiatement une correction.',
+      ),
     ],
   ),
   Lesson(
@@ -1005,6 +1127,17 @@ const lessons = <Lesson>[
         options: ['Oui', 'Non'],
         answer: 1,
         explanation: 'Git peut seulement avancer le pointeur de branche.',
+      ),
+      Exercise(
+        id: 'e67',
+        question: 'Quand un fast-forward est-il possible ?',
+        options: [
+          'Quand la branche cible n’a pas avancé depuis la création de l’autre',
+          'Quand les deux branches ont divergé',
+          'Jamais avec main',
+        ],
+        answer: 0,
+        explanation: 'Sans divergence, Git n’a qu’à avancer le pointeur.',
       ),
     ],
   ),
@@ -1032,6 +1165,18 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'git add indique à Git que le fichier est résolu.',
       ),
+      Exercise(
+        id: 'e68',
+        question: 'Que signifient les marqueurs <<<<<<< et >>>>>>> ?',
+        options: [
+          'Une erreur de syntaxe du langage',
+          'Les deux versions en conflit à départager',
+          'Des commentaires à conserver',
+        ],
+        answer: 1,
+        explanation:
+            'Ils délimitent la version courante et la version entrante ; ils doivent disparaître du résultat final.',
+      ),
     ],
   ),
   Lesson(
@@ -1055,6 +1200,15 @@ const lessons = <Lesson>[
         answer: 1,
         explanation:
             'Il récupère les informations distantes sans les intégrer.',
+      ),
+      Exercise(
+        id: 'e69',
+        question:
+            'Après git fetch, comment intégrer les changements récupérés ?',
+        options: ['git merge origin/main', 'git init', 'git stash'],
+        answer: 0,
+        explanation:
+            'fetch met à jour origin/main ; merge ou rebase l’intègre ensuite à ta branche.',
       ),
     ],
   ),
@@ -1083,6 +1237,18 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'pull récupère puis intègre les changements distants.',
       ),
+      Exercise(
+        id: 'e70',
+        question: 'Pourquoi avoir une copie de travail propre avant pull ?',
+        options: [
+          'Pour ne pas mélanger tes changements locaux avec l’intégration',
+          'Parce que pull efface tout',
+          'Ce n’est pas utile',
+        ],
+        answer: 0,
+        explanation:
+            'Une copie propre rend l’intégration et les éventuels conflits plus lisibles.',
+      ),
     ],
   ),
   Lesson(
@@ -1109,6 +1275,14 @@ const lessons = <Lesson>[
         ],
         answer: 0,
         explanation: 'Elle configure la branche amont utilisée par défaut.',
+      ),
+      Exercise(
+        id: 'e71',
+        question: 'Une fois -u utilisé, que suffit-il de taper ensuite ?',
+        options: ['git push', 'git push --all --force', 'git remote add'],
+        answer: 0,
+        explanation:
+            'La branche distante est mémorisée : git push et git pull suffisent.',
       ),
     ],
   ),
@@ -1139,6 +1313,18 @@ const lessons = <Lesson>[
         ],
         answer: 0,
         explanation: 'Le besoin et sa solution restent reliés.',
+      ),
+      Exercise(
+        id: 'e72',
+        question: 'Quand fermer une issue ?',
+        options: [
+          'Dès sa création',
+          'Quand le résultat attendu est atteint',
+          'Jamais',
+        ],
+        answer: 1,
+        explanation:
+            'L’issue se ferme lorsque le besoin décrit est satisfait, idéalement via la pull request liée.',
       ),
     ],
   ),
@@ -1171,6 +1357,18 @@ const lessons = <Lesson>[
         explanation:
             'Le contexte et la vérification accélèrent une revue fiable.',
       ),
+      Exercise(
+        id: 'e73',
+        question: 'Qu’est-ce qui aide le plus la personne qui relit ?',
+        options: [
+          'Le titre « modifs »',
+          'Les étapes pour tester le changement',
+          'Aucune description',
+        ],
+        answer: 1,
+        explanation:
+            'Savoir comment tester permet de vérifier rapidement le comportement.',
+      ),
     ],
   ),
   Lesson(
@@ -1201,6 +1399,18 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'Il localise le risque et propose une action vérifiable.',
       ),
+      Exercise(
+        id: 'e74',
+        question: 'Comment signaler une simple préférence de style ?',
+        options: [
+          'Comme un blocage obligatoire',
+          'Comme une suggestion facultative',
+          'Ne jamais la mentionner',
+        ],
+        answer: 1,
+        explanation:
+            'Distinguer suggestion et obligation évite de bloquer inutilement une pull request.',
+      ),
     ],
   ),
   Lesson(
@@ -1228,6 +1438,13 @@ const lessons = <Lesson>[
         answer: 0,
         explanation: 'Il conserve le journal local des mouvements récents.',
       ),
+      Exercise(
+        id: 'e75',
+        question: 'Le reflog est-il partagé avec le dépôt distant ?',
+        options: ['Oui, à chaque push', 'Non, il reste local'],
+        answer: 1,
+        explanation: 'Le reflog est un journal propre à ton dépôt local.',
+      ),
     ],
   ),
   Lesson(
@@ -1251,6 +1468,14 @@ const lessons = <Lesson>[
         options: ['git stash pop', 'git restore --all', 'git push'],
         answer: 0,
         explanation: 'stash pop applique puis retire la sauvegarde temporaire.',
+      ),
+      Exercise(
+        id: 'e76',
+        question: 'Quelle commande liste les stash enregistrés ?',
+        options: ['git stash list', 'git log --stash', 'git status --all'],
+        answer: 0,
+        explanation:
+            'git stash list affiche chaque entrée, de la plus récente à la plus ancienne.',
       ),
     ],
   ),
@@ -1278,6 +1503,14 @@ const lessons = <Lesson>[
         answer: 2,
         explanation:
             '--hard remplace également le contenu de la copie de travail.',
+      ),
+      Exercise(
+        id: 'e77',
+        question: 'Quel mode garde les changements préparés dans l’index ?',
+        options: ['--soft', '--mixed', '--hard'],
+        answer: 0,
+        explanation:
+            '--soft déplace seulement la branche : l’index et les fichiers sont conservés.',
       ),
     ],
   ),
@@ -1308,6 +1541,19 @@ const lessons = <Lesson>[
         ],
         answer: 0,
         explanation: 'Le job et son journal localisent la source du problème.',
+      ),
+      Exercise(
+        id: 'e78',
+        question:
+            'Une CI passe en local mais échoue en ligne. Piste probable ?',
+        options: [
+          'Une différence d’environnement ou de version',
+          'Git est cassé',
+          'Il faut supprimer la CI',
+        ],
+        answer: 0,
+        explanation:
+            'Versions d’outils, variables ou fichiers non versionnés expliquent souvent l’écart.',
       ),
     ],
   ),
@@ -1340,6 +1586,18 @@ const lessons = <Lesson>[
         explanation:
             'Les utilisateurs doivent pouvoir anticiper une migration.',
       ),
+      Exercise(
+        id: 'e79',
+        question: 'À qui s’adressent d’abord les notes de version ?',
+        options: [
+          'Aux utilisateurs du projet',
+          'Uniquement au compilateur',
+          'Aux robots de recherche',
+        ],
+        answer: 0,
+        explanation:
+            'Elles décrivent les effets visibles pour celles et ceux qui utilisent le projet.',
+      ),
     ],
   ),
   Lesson(
@@ -1370,6 +1628,891 @@ const lessons = <Lesson>[
         answer: 0,
         explanation:
             'La documentation maintenue réduit la dépendance à la mémoire orale.',
+      ),
+      Exercise(
+        id: 'e80',
+        question: 'Que faire d’une branche déjà fusionnée ?',
+        options: [
+          'La garder indéfiniment',
+          'La supprimer',
+          'La renommer en main',
+        ],
+        answer: 1,
+        explanation:
+            'Supprimer les branches fusionnées garde la liste lisible.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'remove-rename',
+    level: 2,
+    title: 'Supprimer et renommer un fichier suivi',
+    subtitle: 'Garder l’historique cohérent quand l’arborescence change',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Supprimer un fichier suivi à la main laisse Git constater une suppression qu’il faut encore préparer. git rm supprime le fichier et prépare cette suppression en une seule étape.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git rm brouillon.txt'),
+      LessonBlock(LessonBlockType.command, 'git mv notes.txt NOTES.md'),
+      LessonBlock(
+        LessonBlockType.text,
+        'git mv renomme le fichier et prépare à la fois l’ancien et le nouveau nom. Le commit suivant enregistre le renommage.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'git rm --cached fichier arrête le suivi tout en gardant le fichier sur le disque : pratique pour un fichier ajouté par erreur, à compléter ensuite dans .gitignore.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e81',
+        question:
+            'Quelle commande arrête le suivi d’un fichier sans le supprimer du disque ?',
+        options: [
+          'git rm fichier',
+          'git rm --cached fichier',
+          'git restore fichier',
+        ],
+        answer: 1,
+        explanation: '--cached retire le fichier de l’index seulement.',
+      ),
+      Exercise(
+        id: 'e82',
+        question: 'Que prépare git mv ancien nouveau ?',
+        options: [
+          'Rien, il faut tout refaire à la main',
+          'La suppression de l’ancien nom et l’ajout du nouveau',
+          'Un commit automatique',
+        ],
+        answer: 1,
+        explanation: 'Le renommage est préparé ; il reste à créer le commit.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'history-graph',
+    level: 3,
+    title: 'Lire l’historique en graphe',
+    subtitle: 'Visualiser branches et fusions dans le terminal',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git log --oneline --graph --all'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Chaque astérisque est un commit. Les traits verticaux et obliques relient chaque commit à ses parents : une fourche marque le départ d’une branche, une jonction une fusion.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Les étiquettes entre parenthèses indiquent où pointent HEAD, les branches et les tags.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Sans --all, git log ne montre que l’historique atteignable depuis HEAD : les commits d’une autre branche n’y apparaissent pas.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e83',
+        question: 'Quelle option affiche aussi les autres branches ?',
+        options: ['--all', '--short', '--quiet'],
+        answer: 0,
+        explanation:
+            '--all parcourt toutes les références, pas seulement HEAD.',
+      ),
+      Exercise(
+        id: 'e84',
+        question: 'Que signale (HEAD -> main) à côté d’un commit ?',
+        options: [
+          'Le commit le plus ancien',
+          'Le commit sur lequel tu travailles, via la branche main',
+          'Un commit supprimé',
+        ],
+        answer: 1,
+        explanation: 'HEAD pointe sur main, qui pointe sur ce commit.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'detached-head',
+    level: 3,
+    title: 'Comprendre la HEAD détachée',
+    subtitle: 'Explorer un ancien commit sans perdre ton travail',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Habituellement, HEAD désigne une branche. Quand tu te places directement sur un commit, HEAD est « détachée » : elle pointe sur le commit lui-même.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git switch --detach a1b2c3d'),
+      LessonBlock(
+        LessonBlockType.analogy,
+        'C’est comme feuilleter une ancienne version d’un document : tu peux regarder et faire des essais, mais aucune étiquette de branche ne suit tes nouveaux commits.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Un commit créé en HEAD détachée n’appartient à aucune branche. Une fois reparti ailleurs, il devient difficile à retrouver.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git switch -c sauvetage'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Pour garder un essai fait en HEAD détachée, crée une branche à cet endroit avant de repartir. git switch - revient à la branche précédente.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e85',
+        question: 'Que désigne HEAD dans l’état détaché ?',
+        options: ['Une branche', 'Directement un commit', 'Le dépôt distant'],
+        answer: 1,
+        explanation: 'HEAD pointe sur un commit précis au lieu d’une branche.',
+      ),
+      Exercise(
+        id: 'e86',
+        question: 'Comment garder un commit créé en HEAD détachée ?',
+        options: [
+          'git switch -c nouvelle-branche',
+          'git reset --hard',
+          'git stash',
+        ],
+        answer: 0,
+        explanation: 'Une branche donne un nom durable au commit.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'clone-project',
+    level: 4,
+    title: 'Cloner un projet existant',
+    subtitle: 'Récupérer un dépôt complet avec son historique',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.command,
+        'git clone https://github.com/exemple/projet.git',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'clone télécharge tout l’historique, crée la copie de travail de la branche principale et configure automatiquement le distant origin.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'La branche locale main suit déjà origin/main : git pull et git push fonctionnent sans autre réglage.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git remote -v'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Dans GitQuest, le laboratoire contient un seul dépôt : réinitialise-le avec le bouton du terminal avant de cloner.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e87',
+        question: 'Que configure git clone automatiquement ?',
+        options: ['Le distant origin', 'Une clé SSH', 'Une pull request'],
+        answer: 0,
+        explanation: 'clone enregistre l’adresse d’origine sous le nom origin.',
+      ),
+      Exercise(
+        id: 'e88',
+        question: 'Faut-il lancer git init avant git clone ?',
+        options: ['Oui', 'Non'],
+        answer: 1,
+        explanation: 'clone crée lui-même le dépôt.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'fork-contribute',
+    level: 4,
+    title: 'Contribuer avec un fork',
+    subtitle: 'Proposer un changement à un projet qui n’est pas le tien',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Sans droit d’écriture sur un projet, tu crées sur GitHub un fork : une copie du dépôt dans ton compte, sur laquelle tu peux pousser.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git clone https://github.com/toi/projet.git',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git remote add upstream https://github.com/auteur/projet.git',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Par convention, origin désigne ton fork et upstream le dépôt original. Tu pousses ta branche sur origin, puis tu ouvres une pull request vers upstream.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Avant une nouvelle contribution, récupère les nouveautés avec git fetch upstream, puis intègre upstream/main.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e89',
+        question: 'Que désigne souvent upstream dans un fork ?',
+        options: ['Ton fork', 'Le dépôt original', 'Ta branche locale'],
+        answer: 1,
+        explanation: 'upstream pointe vers le projet d’origine.',
+      ),
+      Exercise(
+        id: 'e90',
+        question: 'Où pousses-tu ta branche de contribution ?',
+        options: [
+          'Sur ton fork (origin)',
+          'Directement sur le dépôt original',
+          'Nulle part',
+        ],
+        answer: 0,
+        explanation:
+            'Sans droits sur l’original, tu pousses sur ton fork puis tu ouvres une pull request.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'github-auth',
+    level: 4,
+    title: 'S’authentifier auprès de GitHub',
+    subtitle: 'Clé SSH ou jeton : pousser sans mot de passe',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'GitHub n’accepte plus le mot de passe du compte pour git push. Deux solutions : un jeton d’accès personnel en HTTPS, ou une clé SSH.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'ssh-keygen -t ed25519 -C "ada@example.com"',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'La clé publique, dans le fichier .pub, s’ajoute dans les réglages GitHub. La clé privée reste sur ta machine. L’adresse du dépôt prend alors la forme git@github.com:compte/projet.git.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Ne partage jamais ta clé privée ni ton jeton, et ne les committe pas : traite-les comme des mots de passe.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Donne à un jeton uniquement les droits nécessaires et une date d’expiration.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e91',
+        question: 'Quelle partie d’une clé SSH ajoutes-tu sur GitHub ?',
+        options: ['La clé publique', 'La clé privée', 'Les deux'],
+        answer: 0,
+        explanation:
+            'Seule la clé publique est partagée ; la clé privée ne quitte pas ta machine.',
+      ),
+      Exercise(
+        id: 'e92',
+        question: 'Un jeton a été committé par erreur. Que faire ?',
+        options: [
+          'Rien, le dépôt est privé',
+          'Le révoquer immédiatement puis nettoyer l’historique',
+          'Le renommer',
+        ],
+        answer: 1,
+        explanation: 'Un secret publié doit être considéré comme compromis.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'push-rejected',
+    level: 4,
+    title: 'Quand le push est refusé',
+    subtitle: 'Comprendre et résoudre un rejet non fast-forward',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Si le distant contient des commits que tu n’as pas, git push est refusé : envoyer ta branche effacerait le travail des autres.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git pull --rebase origin main'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Récupère et intègre d’abord les changements distants, résous les éventuels conflits, vérifie que tout fonctionne, puis pousse à nouveau.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git push origin main'),
+      LessonBlock(
+        LessonBlockType.warning,
+        'git push --force écrase l’historique distant. Sur une branche partagée, c’est presque toujours une erreur ; si tu as réécrit ta propre branche, préfère --force-with-lease.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e93',
+        question: 'Pourquoi un push est-il refusé en non fast-forward ?',
+        options: [
+          'Le distant contient des commits absents de ta branche',
+          'Ton message de commit est trop long',
+          'Le réseau est trop lent',
+        ],
+        answer: 0,
+        explanation:
+            'Git refuse d’écraser des commits que tu n’as pas encore intégrés.',
+      ),
+      Exercise(
+        id: 'e94',
+        question: 'Quelle option de force est la plus prudente ?',
+        options: ['--force', '--force-with-lease'],
+        answer: 1,
+        explanation:
+            'Elle refuse d’écraser si le distant a changé depuis ta dernière récupération.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'tracking-status',
+    level: 4,
+    title: 'Avance et retard sur le distant',
+    subtitle: 'Lire ahead et behind avant de synchroniser',
+    minutes: 8,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git branch -vv'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Chaque branche affiche la branche distante qu’elle suit. « ahead 2 » signifie deux commits locaux à pousser ; « behind 3 », trois commits distants à récupérer.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git status'),
+      LessonBlock(
+        LessonBlockType.text,
+        'git status résume la même information pour la branche courante, d’après la dernière récupération.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Ces compteurs ne contactent pas le serveur : lance git fetch pour les rafraîchir.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e95',
+        question: '« ahead 2 » signifie…',
+        options: [
+          'Deux commits locaux pas encore poussés',
+          'Deux commits distants à récupérer',
+          'Deux branches en trop',
+        ],
+        answer: 0,
+        explanation:
+            'Ta branche a deux commits d’avance sur sa branche distante.',
+      ),
+      Exercise(
+        id: 'e96',
+        question: 'Comment rafraîchir ces compteurs ?',
+        options: ['git fetch', 'git init', 'git tag'],
+        answer: 0,
+        explanation:
+            'fetch met à jour les références distantes utilisées pour le calcul.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'squash-history',
+    level: 6,
+    title: 'Regrouper ses commits',
+    subtitle: 'Présenter un historique clair avant la revue',
+    minutes: 12,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Pendant le travail, on accumule souvent des commits « wip » ou « oups ». Avant la pull request, les regrouper en un commit clair facilite la relecture.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git reset --soft HEAD~3'),
+      LessonBlock(
+        LessonBlockType.command,
+        'git commit -m "feat: ajoute le formulaire de contact"',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'reset --soft recule la branche de trois commits en gardant tous leurs changements préparés : un seul commit les enregistre ensuite.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'git rebase -i HEAD~3 offre la même chose de façon interactive, avec pick, squash ou reword dans un éditeur. Sur GitHub, « Squash and merge » regroupe au moment de la fusion.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Ne regroupe que des commits encore locaux, ou préviens l’équipe : réécrire un historique publié oblige les autres à se resynchroniser.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e97',
+        question: 'Après git reset --soft HEAD~3, où sont les changements ?',
+        options: ['Perdus', 'Préparés dans l’index', 'Dans un stash'],
+        answer: 1,
+        explanation:
+            '--soft garde les changements préparés, prêts pour un nouveau commit.',
+      ),
+      Exercise(
+        id: 'e98',
+        question: 'Quand éviter de regrouper des commits ?',
+        options: [
+          'Quand ils sont déjà sur une branche partagée',
+          'Quand ils sont encore locaux',
+          'Quand leurs messages contiennent des fautes',
+        ],
+        answer: 0,
+        explanation:
+            'Réécrire un historique partagé perturbe les autres contributeurs.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'find-regression',
+    level: 7,
+    title: 'Trouver un bug avec bisect',
+    subtitle: 'Chercher le commit fautif par dichotomie',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Une fonctionnalité marchait il y a un mois et ne marche plus ? git bisect cherche le commit fautif en coupant l’historique en deux à chaque étape.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git bisect start'),
+      LessonBlock(LessonBlockType.command, 'git bisect bad'),
+      LessonBlock(LessonBlockType.command, 'git bisect good v1.0.0'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Git te place sur un commit intermédiaire : teste, puis réponds git bisect good ou git bisect bad. En une dizaine d’étapes, tu isoles un commit parmi un millier.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Termine toujours par git bisect reset pour revenir sur ta branche.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e99',
+        question: 'Sur 1000 commits, combien d’étapes faut-il environ ?',
+        options: ['10', '100', '500'],
+        answer: 0,
+        explanation:
+            'Chaque étape divise l’intervalle par deux : 2 puissance 10 vaut environ 1000.',
+      ),
+      Exercise(
+        id: 'e100',
+        question: 'Quelle commande termine la recherche ?',
+        options: ['git bisect reset', 'git bisect stop', 'git reset --hard'],
+        answer: 0,
+        explanation: 'bisect reset ramène HEAD sur la branche de départ.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'create-token',
+    level: 8,
+    title: 'Créer un jeton d’accès personnel',
+    subtitle: 'Le « mot de passe » à utiliser pour git push en HTTPS',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'GitHub refuse le mot de passe du compte pour Git en HTTPS. À la place, tu crées un jeton d’accès personnel (token) : une longue clé que Git utilise comme mot de passe.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Sur github.com :\n1. Clique sur ta photo de profil, puis Settings.\n2. Tout en bas du menu de gauche : Developer settings.\n3. Personal access tokens → Fine-grained tokens.\n4. Generate new token : donne un nom, une date d’expiration et choisis le ou les dépôts concernés.\n5. Dans Repository permissions, règle Contents sur Read and write.\n6. Generate token, puis copie le jeton immédiatement.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'GitHub n’affiche le jeton qu’une seule fois. Range-le dans un gestionnaire de mots de passe. Si tu le perds, supprime-le et crées-en un nouveau.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Les jetons classiques (Tokens (classic)) existent encore : coche alors au minimum la case repo. Les jetons fine-grained sont plus sûrs, car limités aux dépôts choisis.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e101',
+        question: 'Où crée-t-on un jeton sur GitHub ?',
+        options: [
+          'Settings → Developer settings → Personal access tokens',
+          'Dans l’onglet Issues du dépôt',
+          'Avec git config',
+        ],
+        answer: 0,
+        explanation:
+            'Developer settings se trouve tout en bas des réglages du compte.',
+      ),
+      Exercise(
+        id: 'e102',
+        question:
+            'Quelle permission permet de pousser du code avec un jeton fine-grained ?',
+        options: [
+          'Contents : Read and write',
+          'Issues : Read-only',
+          'Metadata seulement',
+        ],
+        answer: 0,
+        explanation:
+            'Contents donne accès aux fichiers et aux commits du dépôt.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'use-token',
+    level: 8,
+    title: 'Utiliser son jeton avec Git',
+    subtitle: 'Le coller au bon moment et ne pas le retaper',
+    minutes: 9,
+    blocks: [
+      LessonBlock(LessonBlockType.command, 'git push origin main'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Git demande Username : saisis ton identifiant GitHub. Pour Password, colle le jeton, pas le mot de passe du compte. Rien ne s’affiche pendant la saisie : c’est normal.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git config --global credential.helper cache',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'cache garde le jeton en mémoire pendant 15 minutes. La valeur store l’enregistre en clair dans ~/.git-credentials : pratique, mais à réserver à un ordinateur personnel.',
+      ),
+      LessonBlock(LessonBlockType.command, 'gh auth login'),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Le plus simple reste GitHub CLI, l’outil officiel : gh auth login ouvre le navigateur, crée l’accès et configure Git automatiquement.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'N’écris jamais le jeton dans l’adresse du dépôt (https://jeton@github.com/…) : il finirait dans .git/config et dans l’historique du terminal.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e103',
+        question: 'Que colles-tu quand Git demande Password ?',
+        options: [
+          'Le mot de passe du compte GitHub',
+          'Le jeton d’accès personnel',
+          'Rien',
+        ],
+        answer: 1,
+        explanation: 'GitHub n’accepte que le jeton (ou une clé SSH) pour Git.',
+      ),
+      Exercise(
+        id: 'e104',
+        question: 'Quelle commande configure l’accès avec GitHub CLI ?',
+        options: ['gh auth login', 'git login', 'git token add'],
+        answer: 0,
+        explanation:
+            'gh auth login guide toute la connexion depuis le navigateur.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'ssh-setup',
+    level: 8,
+    title: 'Configurer une clé SSH pas à pas',
+    subtitle: 'S’authentifier une fois pour toutes',
+    minutes: 11,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.command,
+        'ssh-keygen -t ed25519 -C "ton-email@example.com"',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Appuie sur Entrée pour accepter l’emplacement proposé, puis choisis une phrase de passe. Deux fichiers sont créés : id_ed25519 (clé privée) et id_ed25519.pub (clé publique).',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'cat ~/.ssh/id_ed25519.pub',
+        caption: 'Copie toute la ligne affichée.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Sur github.com :\n1. Photo de profil → Settings.\n2. SSH and GPG keys → New SSH key.\n3. Donne un titre (par exemple « Ordinateur portable ») et colle le contenu du fichier .pub.\n4. Add SSH key.',
+      ),
+      LessonBlock(LessonBlockType.command, 'ssh -T git@github.com'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Si GitHub répond « Hi pseudo! You’ve successfully authenticated », c’est gagné. Pour un dépôt déjà cloné en HTTPS, change son adresse :',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git remote set-url origin git@github.com:pseudo/projet.git',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Ne copie jamais le fichier sans .pub : c’est ta clé privée.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e105',
+        question: 'Quel fichier colles-tu sur GitHub ?',
+        options: ['id_ed25519', 'id_ed25519.pub', 'known_hosts'],
+        answer: 1,
+        explanation: 'Seule la clé publique, en .pub, se partage.',
+      ),
+      Exercise(
+        id: 'e106',
+        question: 'Quelle commande teste la connexion SSH à GitHub ?',
+        options: ['ssh -T git@github.com', 'git ssh test', 'ping github.com'],
+        answer: 0,
+        explanation:
+            'GitHub répond avec ton identifiant si la clé est reconnue.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'github-pages',
+    level: 8,
+    title: 'Publier un site avec GitHub Pages',
+    subtitle: 'Mettre en ligne un site statique gratuitement',
+    minutes: 10,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'GitHub Pages publie gratuitement les fichiers HTML, CSS et JavaScript d’un dépôt. Il faut un fichier index.html à la racine, ou dans un dossier docs/.',
+      ),
+      LessonBlock(LessonBlockType.command, 'git add index.html'),
+      LessonBlock(
+        LessonBlockType.command,
+        'git commit -m "feat: ajoute la page d’accueil"',
+      ),
+      LessonBlock(LessonBlockType.command, 'git push origin main'),
+      LessonBlock(
+        LessonBlockType.text,
+        'Sur la page du dépôt :\n1. Settings → Pages.\n2. Dans Build and deployment, Source : Deploy from a branch.\n3. Branch : main et dossier / (root), puis Save.\n4. Patiente une à deux minutes : l’adresse du site s’affiche en haut de la page.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Un site de projet est publié à l’adresse https://pseudo.github.io/nom-du-depot/.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Chaque push sur main met le site à jour. L’onglet Actions montre la progression du déploiement.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Avec un compte gratuit, le dépôt doit être public pour utiliser Pages : tout son contenu est visible.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e107',
+        question: 'Quel fichier sert de page d’accueil ?',
+        options: ['README.md', 'index.html', 'main.css'],
+        answer: 1,
+        explanation: 'Pages affiche index.html à la racine du dossier publié.',
+      ),
+      Exercise(
+        id: 'e108',
+        question: 'Où active-t-on GitHub Pages ?',
+        options: [
+          'Settings → Pages du dépôt',
+          'Avec une commande git pages',
+          'Dans les issues',
+        ],
+        answer: 0,
+        explanation: 'Le réglage Pages se trouve dans les paramètres du dépôt.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'user-site',
+    level: 8,
+    title: 'Créer ton site pseudo.github.io',
+    subtitle: 'Une adresse personnelle à la racine',
+    minutes: 8,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un dépôt nommé exactement pseudo.github.io, où pseudo est ton identifiant GitHub, devient ton site personnel, publié à l’adresse https://pseudo.github.io.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Étapes :\n1. Sur GitHub, bouton + → New repository.\n2. Repository name : pseudo.github.io, avec ton identifiant exact en minuscules.\n3. Choisis Public et coche Add a README file.\n4. Create repository, puis clone-le.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'git clone https://github.com/pseudo/pseudo.github.io.git',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        'echo "<h1>Bonjour</h1>" > index.html',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Ajoute index.html, crée un commit et pousse : le site apparaît en général en quelques minutes. En cas de doute, vérifie Settings → Pages.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Un compte n’a qu’un site personnel, mais peut avoir autant de sites de projet que de dépôts.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e109',
+        question: 'Comment doit s’appeler le dépôt de ton site personnel ?',
+        options: ['site-perso', 'pseudo.github.io', 'github-pages'],
+        answer: 1,
+        explanation: 'Le nom exact pseudo.github.io active le site personnel.',
+      ),
+      Exercise(
+        id: 'e110',
+        question: 'Quelle adresse aura le site du dépôt demo ?',
+        options: [
+          'https://pseudo.github.io/demo/',
+          'https://demo.github.com',
+          'https://github.io/demo',
+        ],
+        answer: 0,
+        explanation:
+            'Un site de projet est publié dans un sous-dossier de ton adresse personnelle.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'profile-readme',
+    level: 8,
+    title: 'Personnaliser ton profil GitHub',
+    subtitle: 'Le README affiché sur ta page de profil',
+    minutes: 7,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un dépôt public portant exactement ton identifiant (pseudo/pseudo) est spécial : son README.md s’affiche en haut de ta page de profil.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Étapes :\n1. + → New repository.\n2. Repository name : ton identifiant exact. GitHub affiche un message indiquant qu’il s’agit d’un dépôt spécial.\n3. Public, coche Add a README file, puis Create repository.\n4. Modifie README.md : présentation, technologies, projets favoris.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Le README s’écrit en Markdown : # pour un titre, - pour une liste, [texte](lien) pour un lien.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e111',
+        question: 'Quel dépôt alimente la page de profil ?',
+        options: [
+          'Un dépôt nommé comme ton identifiant',
+          'N’importe quel dépôt épinglé',
+          'Le dépôt pseudo.github.io',
+        ],
+        answer: 0,
+        explanation: 'Seul le dépôt pseudo/pseudo est affiché sur le profil.',
+      ),
+      Exercise(
+        id: 'e112',
+        question: 'Dans quel format écrit-on un README ?',
+        options: ['Markdown', 'PDF', 'Word'],
+        answer: 0,
+        explanation: 'GitHub affiche le Markdown mis en forme.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'first-action',
+    level: 8,
+    title: 'Automatiser avec GitHub Actions',
+    subtitle: 'Lancer les tests à chaque push',
+    minutes: 12,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'GitHub Actions exécute des tâches sur les serveurs de GitHub à chaque événement : push, pull request, publication d’une version… Un workflow est un fichier YAML placé dans .github/workflows/.',
+      ),
+      LessonBlock(LessonBlockType.command, 'mkdir -p .github/workflows'),
+      LessonBlock(
+        LessonBlockType.command,
+        'name: CI\non: [push, pull_request]\njobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test',
+        caption:
+            'Contenu du fichier .github/workflows/ci.yml (projet JavaScript).',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Après le push, l’onglet Actions du dépôt affiche chaque exécution : une coche verte si tout passe, une croix rouge sinon. Les pull requests affichent le même résultat.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Commence par un seul job simple. Les modèles de l’onglet Actions → New workflow sont un bon point de départ pour chaque langage.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e113',
+        question: 'Où place-t-on un fichier de workflow ?',
+        options: ['.github/workflows/', 'src/', '.git/hooks/'],
+        answer: 0,
+        explanation: 'GitHub lit les workflows uniquement dans ce dossier.',
+      ),
+      Exercise(
+        id: 'e114',
+        question: 'Où voit-on le résultat d’un workflow ?',
+        options: ['Dans l’onglet Actions', 'Dans git log', 'Dans le README'],
+        answer: 0,
+        explanation: 'Chaque exécution y est détaillée, étape par étape.',
+      ),
+    ],
+  ),
+  Lesson(
+    id: 'repo-secrets',
+    level: 8,
+    title: 'Stocker un secret pour la CI',
+    subtitle: 'Utiliser une clé sans l’écrire dans le code',
+    minutes: 9,
+    blocks: [
+      LessonBlock(
+        LessonBlockType.text,
+        'Un workflow a parfois besoin d’une clé, par exemple pour déployer ou appeler une API. Elle ne doit jamais être écrite dans le dépôt : on la range dans les secrets du dépôt.',
+      ),
+      LessonBlock(
+        LessonBlockType.text,
+        'Étapes :\n1. Page du dépôt → Settings.\n2. Secrets and variables → Actions.\n3. New repository secret : un nom en majuscules (par exemple API_KEY) et sa valeur.\n4. Add secret.',
+      ),
+      LessonBlock(
+        LessonBlockType.command,
+        '- run: ./deploy.sh\n  env:\n    API_KEY: \${{ secrets.API_KEY }}',
+        caption: 'Utilisation du secret dans une étape du workflow.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'GitHub masque automatiquement la valeur des secrets dans les journaux d’exécution.',
+      ),
+      LessonBlock(
+        LessonBlockType.warning,
+        'Un secret déjà committé reste dans l’historique : révoque-le, génère une nouvelle clé, puis range uniquement la nouvelle dans les secrets.',
+      ),
+    ],
+    exercises: [
+      Exercise(
+        id: 'e115',
+        question: 'Où ranger une clé d’API utilisée par la CI ?',
+        options: [
+          'Settings → Secrets and variables → Actions',
+          'Dans le README',
+          'Dans un commit',
+        ],
+        answer: 0,
+        explanation:
+            'Les secrets du dépôt sont chiffrés et invisibles dans le code.',
+      ),
+      Exercise(
+        id: 'e116',
+        question: 'Comment un workflow lit-il le secret API_KEY ?',
+        options: [
+          '\${{ secrets.API_KEY }}',
+          'Dans le fichier README',
+          'git secret API_KEY',
+        ],
+        answer: 0,
+        explanation:
+            'La syntaxe secrets.NOM injecte la valeur au moment de l’exécution.',
       ),
     ],
   ),
@@ -1438,9 +2581,15 @@ const achievements = <Achievement>[
   ),
   Achievement(
     'forty_lessons',
-    'Maître du parcours',
-    'Terminer les quarante leçons',
+    'Grand explorateur',
+    'Terminer quarante leçons',
     Icons.workspace_premium_rounded,
+  ),
+  Achievement(
+    'fifty_lessons',
+    'Maître du parcours',
+    'Terminer cinquante leçons',
+    Icons.military_tech_rounded,
   ),
   Achievement(
     'issue_author',
