@@ -12,6 +12,7 @@ enum ProjectRequirement {
   pullRequestMerged,
   conventionalCommit,
   pullRequestCommented,
+  upstreamConfigured,
 }
 
 class ProjectStepDefinition {

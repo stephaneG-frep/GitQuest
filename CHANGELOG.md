@@ -1,6 +1,16 @@
 # Journal des changements
 
-## Prochaine version
+## 1.2.0 — 2026-11-19
+
+### Finitions
+
+- Boîte à outils : 11 nouvelles situations (41 au total), dont `git rm`, `git log --graph`, la HEAD détachée, `git branch -vv`, `remote set-url`, `--force-with-lease`, le regroupement de commits, `git bisect` et `gh auth login`.
+- Glossaire : 10 nouvelles définitions (40 au total), dont HEAD détachée, upstream, squash, jeton d’accès, clé SSH, GitHub Pages, Actions et secret.
+- Terminal : suggestions rapides pour clone, rm, mv, log en graphe, HEAD détachée, suivi distant et stash list.
+- Nouveau projet fil rouge « Site GitHub Pages » (4 projets au total), avec une étape de publication suivie (`git push -u`).
+- Mode d’emploi mis à jour : niveau 8, nouvelles commandes, 30 missions et 4 projets.
+- Intégration continue GitHub Actions : formatage, analyse et tests à chaque push et pull request.
+- Le validateur de projets ne dépend plus d’un nombre magique pour reconnaître une issue créée.
 
 ### Niveau 8 « GitHub en pratique »
 
@@ -31,6 +41,8 @@
 - Import : la sauvegarde est entièrement validée avant toute modification, la taille de texte est bornée et le rappel est reprogrammé.
 - Un profil local corrompu n’empêche plus le démarrage. La série de jours s’affiche rompue après un jour manqué.
 - Version unique `gitQuestVersion` vérifiée contre le pubspec. Libellé Android « GitQuest » et signature release via `android/key.properties`.
+
+## 1.1.0 — 2026-08-10
 
 - Persistance complète du dépôt virtuel entre les lancements.
 - Ajout de `git commit --amend`, `git reset`, `git revert`, `git tag` et `git reflog`.

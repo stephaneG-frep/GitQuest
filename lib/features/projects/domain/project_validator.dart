@@ -29,7 +29,7 @@ abstract final class ProjectValidator {
       step.target,
     ),
     ProjectRequirement.issueCreated => collaboration.issues.any(
-      (issue) => issue.id >= 3,
+      (issue) => issue.id > CollaborationStore.seedIssueCount,
     ),
     ProjectRequirement.pullRequestCreated =>
       collaboration.pullRequests.isNotEmpty,
@@ -46,6 +46,9 @@ abstract final class ProjectValidator {
     ),
     ProjectRequirement.pullRequestCommented => collaboration.pullRequests.any(
       (pullRequest) => pullRequest.comments.isNotEmpty,
+    ),
+    ProjectRequirement.upstreamConfigured => repository.upstreams.containsKey(
+      step.target,
     ),
   };
 }

@@ -367,6 +367,137 @@ const commandReferences = <CommandReference>[
     risk: CommandRisk.safe,
     example: 'git mv ancien.md guide.md',
   ),
+  CommandReference(
+    situation: 'Supprimer un fichier suivi',
+    command: 'git rm <fichier>',
+    explanation: 'Supprime le fichier et prépare sa suppression.',
+    result: 'La suppression sera enregistrée au prochain commit.',
+    category: 'Fichiers',
+    level: 'Intermédiaire',
+    risk: CommandRisk.caution,
+    example: 'git rm brouillon.txt',
+    warning:
+        'Le fichier disparaît aussi du disque. Pour le garder, utilise --cached.',
+  ),
+  CommandReference(
+    situation: 'Arrêter de suivre un fichier sans le supprimer',
+    command: 'git rm --cached <fichier>',
+    explanation:
+        'Retire le fichier de l’index tout en le laissant sur le disque.',
+    result: 'Le fichier devient non suivi ; ajoute-le ensuite à .gitignore.',
+    category: 'Fichiers',
+    level: 'Intermédiaire',
+    risk: CommandRisk.safe,
+    example: 'git rm --cached .env',
+  ),
+  CommandReference(
+    situation: 'Voir les branches et fusions en graphe',
+    command: 'git log --oneline --graph --all',
+    explanation:
+        'Dessine l’historique de toutes les branches avec HEAD, branches et tags.',
+    result: 'Les fourches et jonctions montrent branches et fusions.',
+    category: 'Historique',
+    level: 'Intermédiaire',
+    risk: CommandRisk.safe,
+    example: 'git log --oneline --graph --all',
+    variants: <String>['git log --graph'],
+  ),
+  CommandReference(
+    situation: 'Explorer un ancien commit',
+    command: 'git switch --detach <commit>',
+    explanation: 'Place HEAD directement sur un commit, sans branche.',
+    result: 'HEAD est détachée : tu peux observer et faire des essais.',
+    category: 'Branches',
+    level: 'Avancé',
+    risk: CommandRisk.caution,
+    example: 'git switch --detach a1b2c3d',
+    variants: <String>['git checkout <commit>'],
+    warning:
+        'Un commit créé ici n’appartient à aucune branche : crée une branche avant de repartir.',
+  ),
+  CommandReference(
+    situation: 'Revenir à la branche précédente',
+    command: 'git switch -',
+    explanation: 'Bascule sur la dernière branche utilisée.',
+    result: 'Pratique pour alterner entre deux branches.',
+    category: 'Branches',
+    level: 'Intermédiaire',
+    risk: CommandRisk.safe,
+    example: 'git switch -',
+  ),
+  CommandReference(
+    situation: 'Voir quelle branche distante est suivie',
+    command: 'git branch -vv',
+    explanation:
+        'Liste les branches avec leur dernier commit et leur branche distante.',
+    result:
+        'La branche suivie apparaît entre crochets, par exemple [origin/main].',
+    category: 'Distant',
+    level: 'Intermédiaire',
+    risk: CommandRisk.safe,
+    example: 'git branch -vv',
+  ),
+  CommandReference(
+    situation: 'Passer un dépôt de HTTPS à SSH',
+    command: 'git remote set-url origin <url>',
+    explanation: 'Change l’adresse d’un dépôt distant existant.',
+    result: 'Les prochains push et pull utiliseront la nouvelle adresse.',
+    category: 'Distant',
+    level: 'Intermédiaire',
+    risk: CommandRisk.safe,
+    example: 'git remote set-url origin git@github.com:pseudo/projet.git',
+  ),
+  CommandReference(
+    situation: 'Pousser une branche réécrite sans écraser les autres',
+    command: 'git push --force-with-lease',
+    explanation:
+        'Force l’envoi seulement si le distant n’a pas changé depuis ta dernière récupération.',
+    result:
+        'Ta branche réécrite remplace la version distante en toute prudence.',
+    category: 'Distant',
+    level: 'Avancé',
+    risk: CommandRisk.danger,
+    example: 'git push --force-with-lease origin feature/profil',
+    variants: <String>['git push --force'],
+    warning:
+        'Réserve-le à tes propres branches. Sur une branche partagée, intègre plutôt les changements distants.',
+  ),
+  CommandReference(
+    situation: 'Regrouper plusieurs commits en un seul',
+    command: 'git reset --soft HEAD~<n>',
+    explanation:
+        'Recule la branche de n commits en gardant leurs changements préparés.',
+    result: 'Un seul commit peut ensuite enregistrer tout le travail.',
+    category: 'Historique',
+    level: 'Avancé',
+    risk: CommandRisk.caution,
+    example: 'git reset --soft HEAD~3',
+    variants: <String>['git rebase -i HEAD~3'],
+    warning: 'À faire avant de partager ces commits.',
+  ),
+  CommandReference(
+    situation: 'Trouver le commit qui a introduit un bug',
+    command: 'git bisect start',
+    explanation:
+        'Lance une recherche dichotomique entre un bon et un mauvais commit.',
+    result: 'Git te guide jusqu’au premier commit fautif.',
+    category: 'Avancé',
+    level: 'Avancé',
+    risk: CommandRisk.safe,
+    example: 'git bisect start puis git bisect bad et git bisect good v1.0.0',
+    variants: <String>['git bisect reset'],
+  ),
+  CommandReference(
+    situation: 'Se connecter à GitHub sans mot de passe',
+    command: 'gh auth login',
+    explanation: 'Configure l’accès à GitHub avec l’outil officiel GitHub CLI.',
+    result:
+        'Git peut ensuite pousser et récupérer sans redemander d’identifiants.',
+    category: 'GitHub',
+    level: 'Débutant',
+    risk: CommandRisk.safe,
+    example: 'gh auth login',
+  ),
 ];
 
 const glossaryEntries = <GlossaryEntry>[
@@ -519,5 +650,55 @@ const glossaryEntries = <GlossaryEntry>[
     'Conventional Commit',
     'Convention de messages structurés par type.',
     'feat: ajoute la recherche décrit une fonctionnalité.',
+  ),
+  GlossaryEntry(
+    'HEAD détachée',
+    'État où HEAD pointe sur un commit précis au lieu d’une branche.',
+    'git switch --detach a1b2c3d permet d’explorer une ancienne version.',
+  ),
+  GlossaryEntry(
+    'Upstream',
+    'Branche distante suivie par une branche locale ; dans un fork, nom donné au dépôt original.',
+    'main suit origin/main après git push -u origin main.',
+  ),
+  GlossaryEntry(
+    'Fast-forward',
+    'Fusion qui avance simplement le pointeur, sans commit de fusion.',
+    'main n’a pas bougé : merge déplace main sur le dernier commit de feature.',
+  ),
+  GlossaryEntry(
+    'Squash',
+    'Regroupement de plusieurs commits en un seul.',
+    'Trois commits wip deviennent un commit feat: clair.',
+  ),
+  GlossaryEntry(
+    'Bisect',
+    'Recherche dichotomique du commit qui a introduit un bug.',
+    'Dix étapes suffisent pour isoler un commit parmi mille.',
+  ),
+  GlossaryEntry(
+    'Jeton d’accès personnel',
+    'Clé générée sur GitHub qui remplace le mot de passe pour Git en HTTPS.',
+    'Settings → Developer settings → Personal access tokens.',
+  ),
+  GlossaryEntry(
+    'Clé SSH',
+    'Paire de clés qui authentifie ton ordinateur auprès de GitHub sans mot de passe.',
+    'La clé publique id_ed25519.pub est ajoutée dans les réglages GitHub.',
+  ),
+  GlossaryEntry(
+    'GitHub Pages',
+    'Service de GitHub qui publie gratuitement un site statique depuis un dépôt.',
+    'Le dépôt pseudo.github.io devient le site https://pseudo.github.io.',
+  ),
+  GlossaryEntry(
+    'GitHub Actions',
+    'Service d’automatisation qui exécute des workflows à chaque événement du dépôt.',
+    'Un fichier .github/workflows/ci.yml lance les tests à chaque push.',
+  ),
+  GlossaryEntry(
+    'Secret',
+    'Valeur sensible stockée chiffrée dans les réglages du dépôt et lue par les workflows.',
+    'secrets.API_KEY fournit une clé sans l’écrire dans le code.',
   ),
 ];
