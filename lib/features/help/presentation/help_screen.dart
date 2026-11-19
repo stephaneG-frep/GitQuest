@@ -96,13 +96,13 @@ class HelpScreen extends StatelessWidget {
                   title: 'Terminal sécurisé',
                   summary: 'Un laboratoire Git entièrement simulé.',
                   details:
-                      'Les commandes ne touchent jamais aux fichiers réels du téléphone. Commence par git init, ou par git clone après avoir réinitialisé le laboratoire avec le bouton ↺. Utilise git status quand tu hésites et tape help pour afficher les commandes disponibles. Tu peux aussi supprimer ou renommer avec git rm et git mv, dessiner l’historique avec git log --oneline --graph --all, explorer un ancien commit avec git switch --detach et suivre une branche distante avec git push -u. L’icône de branche en haut ouvre le dépôt visuel.',
+                      'Les commandes ne touchent jamais aux fichiers réels du téléphone. Commence par git init, ou par git clone après avoir réinitialisé le laboratoire avec le bouton ↺. Utilise git status quand tu hésites et tape help pour afficher les commandes disponibles. Tu peux aussi supprimer ou renommer avec git rm et git mv, dessiner l’historique avec git log --oneline --graph --all, explorer un ancien commit avec git switch --detach et suivre une branche distante avec git push -u. Pour t’entraîner, gitquest collegue simule une collègue qui publie un commit, et gitquest regression prépare un bug à retrouver avec git bisect. L’icône de branche en haut ouvre le dépôt visuel.',
                 ),
                 const _HelpTopic(
                   icon: Icons.flag_rounded,
                   color: AppColors.violet,
                   title: 'Missions',
-                  summary: '30 défis validés sur le résultat obtenu.',
+                  summary: '32 défis validés sur le résultat obtenu.',
                   details:
                       'Tu peux choisir tes propres commandes : GitQuest vérifie l’état final du dépôt. Trois indices progressifs sont disponibles. Le dépôt est partagé avec le terminal principal, donc tu peux préparer une mission à plusieurs endroits.',
                 ),

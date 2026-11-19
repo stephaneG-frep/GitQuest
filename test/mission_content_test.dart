@@ -5,9 +5,9 @@ import 'package:gitquest/features/terminal/domain/git_command_engine.dart';
 import 'package:gitquest/features/terminal/domain/virtual_repository.dart';
 
 void main() {
-  test('le catalogue propose trente missions cohérentes', () {
-    expect(missions, hasLength(30));
-    expect(missions.map((mission) => mission.id).toSet(), hasLength(30));
+  test('le catalogue propose trente-deux missions cohérentes', () {
+    expect(missions, hasLength(32));
+    expect(missions.map((mission) => mission.id).toSet(), hasLength(32));
     expect(
       missions.every(
         (mission) => mission.objectives.isNotEmpty && mission.hints.length == 3,
@@ -33,6 +33,9 @@ void main() {
   test('valide la mission de synchronisation prudente', () {
     final repository = VirtualRepository();
     final engine = GitCommandEngine(repository);
+    engine.execute('git init');
+    engine.execute('git add .');
+    engine.execute('git commit -m "Base"');
     engine.execute('git remote add origin https://example.com/team.git');
     engine.execute('git fetch origin');
     engine.execute('git pull origin main');

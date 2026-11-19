@@ -1944,6 +1944,10 @@ const lessons = <Lesson>[
         LessonBlockType.warning,
         'git push --force écrase l’historique distant. Sur une branche partagée, c’est presque toujours une erreur ; si tu as réécrit ta propre branche, préfère --force-with-lease.',
       ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Pour t’entraîner dans GitQuest : publie main avec git push -u origin main, tape gitquest collegue pour qu’une collègue pousse un commit, crée ton propre commit puis essaie git push.',
+      ),
     ],
     exercises: [
       Exercise(
@@ -1988,6 +1992,10 @@ const lessons = <Lesson>[
       LessonBlock(
         LessonBlockType.tip,
         'Ces compteurs ne contactent pas le serveur : lance git fetch pour les rafraîchir.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Dans GitQuest, gitquest collegue simule un commit publié par quelqu’un d’autre : git fetch puis git status affichent alors ton retard.',
       ),
     ],
     exercises: [
@@ -2086,6 +2094,10 @@ const lessons = <Lesson>[
       LessonBlock(
         LessonBlockType.tip,
         'Termine toujours par git bisect reset pour revenir sur ta branche.',
+      ),
+      LessonBlock(
+        LessonBlockType.tip,
+        'Pour t’entraîner, tape gitquest regression : huit commits sont créés, l’un d’eux introduit un bug dans app.js. Le tag version-saine marque un commit sain.',
       ),
     ],
     exercises: [

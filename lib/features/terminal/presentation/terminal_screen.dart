@@ -57,6 +57,15 @@ class _TerminalScreenState extends State<TerminalScreen> {
     'push -u origin main',
     'reset --soft HEAD~',
     'stash list',
+    'fetch',
+    'pull --rebase origin main',
+    'push',
+    'bisect start',
+    'bisect bad',
+    'bisect good',
+    'bisect reset',
+    'gitquest collegue',
+    'gitquest regression',
   ];
 
   @override

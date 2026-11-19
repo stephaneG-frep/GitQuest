@@ -266,6 +266,8 @@ void main() {
     test('les branches suivies survivent à la sauvegarde', () {
       run([
         'git init',
+        'git add .',
+        'git commit -m "Base"',
         'git remote add origin https://example.com/site.git',
         'git push -u origin main',
       ]);
@@ -335,6 +337,9 @@ void main() {
         'git init',
         'git remote add origin https://example.com/site.git',
         'git switch -c feature/contact',
+        'echo "contact" > contact.html',
+        'git add .',
+        'git commit -m "feat: ajoute le contact"',
         'git push -u origin feature/contact',
       ]);
       expect(mission('publish-track').validator(repository), isFalse);
