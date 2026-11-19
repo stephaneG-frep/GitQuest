@@ -3,10 +3,19 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app_info.dart';
+
 enum ThemePreference { system, light, dark }
 
 class LocalProgressStore extends ChangeNotifier {
   static const _profileKey = 'gitquest_profile_v1';
+  static const minTextScale = 0.9;
+  static const maxTextScale = 1.3;
+
+  /// Throws if [data] cannot be read as a profile. Nothing is modified.
+  static void validateJson(Map<String, dynamic> data) {
+    LocalProgressStore()._readJson(data);
+  }
 
   String name = 'Explorateur';
   bool onboardingComplete = false;
@@ -34,15 +43,21 @@ class LocalProgressStore extends ChangeNotifier {
     final raw = preferences.getString(_profileKey);
     if (raw == null) return;
     try {
-      _readJson(jsonDecode(raw) as Map<String, dynamic>);
-    } on FormatException {
+      final loaded = LocalProgressStore()
+        .._readJson(jsonDecode(raw) as Map<String, dynamic>);
+      _copyFrom(loaded);
+    } on Object catch (error) {
       // Invalid local data is ignored so the application can still start.
+      debugPrint(
+        'Profil local illisible, valeurs par défaut utilisées : $error',
+      );
     }
+    _expireStreak(DateTime.now());
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'formatVersion': 1,
-    'appVersion': '1.0.0',
+    'appVersion': gitQuestVersion,
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'profile': <String, dynamic>{
       'name': name,
@@ -80,7 +95,7 @@ class LocalProgressStore extends ChangeNotifier {
       if (decoded is! Map<String, dynamic> || decoded['formatVersion'] != 1) {
         return 'Ce fichier n’est pas une sauvegarde GitQuest compatible.';
       }
-      _readJson(decoded);
+      _copyFrom(LocalProgressStore().._readJson(decoded));
       await save();
       notifyListeners();
       return null;
@@ -93,10 +108,12 @@ class LocalProgressStore extends ChangeNotifier {
     Map<String, dynamic> data, {
     bool merge = false,
   }) async {
+    // Parsing into a separate store first: a malformed file throws before
+    // the current profile is modified.
+    final imported = LocalProgressStore().._readJson(data);
     if (!merge) {
-      _readJson(data);
+      _copyFrom(imported);
     } else {
-      final imported = LocalProgressStore().._readJson(data);
       xp = xp > imported.xp ? xp : imported.xp;
       streak = streak > imported.streak ? streak : imported.streak;
       bestStreak = bestStreak > imported.bestStreak
@@ -134,6 +151,37 @@ class LocalProgressStore extends ChangeNotifier {
     await _changed();
   }
 
+  void _copyFrom(LocalProgressStore other) {
+    name = other.name;
+    onboardingComplete = other.onboardingComplete;
+    themePreference = other.themePreference;
+    textScale = other.textScale;
+    dailyGoal = other.dailyGoal;
+    reminderEnabled = other.reminderEnabled;
+    reminderHour = other.reminderHour;
+    reminderMinute = other.reminderMinute;
+    xp = other.xp;
+    streak = other.streak;
+    bestStreak = other.bestStreak;
+    lastActivityDate = other.lastActivityDate;
+    void copySet(Set<String> target, Set<String> source) => target
+      ..clear()
+      ..addAll(source);
+    void copyMap(Map<String, int> target, Map<String, int> source) => target
+      ..clear()
+      ..addAll(source);
+    copySet(completedLessons, other.completedLessons);
+    copySet(completedMissions, other.completedMissions);
+    copySet(unlockedAchievements, other.unlockedAchievements);
+    copySet(favoriteCommands, other.favoriteCommands);
+    copySet(rewardedEvents, other.rewardedEvents);
+    copyMap(dailyActivity, other.dailyActivity);
+    copyMap(dailyXp, other.dailyXp);
+    recentSearches
+      ..clear()
+      ..addAll(other.recentSearches);
+  }
+
   void _readJson(Map<String, dynamic> data) {
     final profile =
         data['profile'] as Map<String, dynamic>? ?? <String, dynamic>{};
@@ -151,8 +199,9 @@ class LocalProgressStore extends ChangeNotifier {
             .where((value) => value.name == settings['theme'])
             .firstOrNull ??
         themePreference;
-    textScale = (settings['textScale'] as num?)?.toDouble() ?? textScale;
-    dailyGoal = settings['dailyGoal'] as int? ?? dailyGoal;
+    textScale = ((settings['textScale'] as num?)?.toDouble() ?? textScale)
+        .clamp(minTextScale, maxTextScale);
+    dailyGoal = (settings['dailyGoal'] as int? ?? dailyGoal).clamp(1, 1000);
     reminderEnabled = settings['reminderEnabled'] as bool? ?? false;
     reminderHour = (settings['reminderHour'] as int? ?? 19).clamp(0, 23);
     reminderMinute = (settings['reminderMinute'] as int? ?? 0).clamp(0, 59);
@@ -250,7 +299,7 @@ class LocalProgressStore extends ChangeNotifier {
   }
 
   Future<void> updateTextScale(double value) async {
-    textScale = value;
+    textScale = value.clamp(minTextScale, maxTextScale);
     await _changed();
   }
 
@@ -319,16 +368,32 @@ class LocalProgressStore extends ChangeNotifier {
     await _changed();
   }
 
+  /// Number of calendar days between the last activity and [now],
+  /// independent of daylight saving time changes.
+  int? _daysSinceLastActivity(DateTime now) {
+    final previous = lastActivityDate == null
+        ? null
+        : DateTime.tryParse(lastActivityDate!);
+    if (previous == null) return null;
+    return DateTime.utc(now.year, now.month, now.day)
+        .difference(DateTime.utc(previous.year, previous.month, previous.day))
+        .inDays;
+  }
+
+  /// A streak that was not continued yesterday is shown as broken.
+  void _expireStreak(DateTime now) {
+    final days = _daysSinceLastActivity(now);
+    if (days != null && days > 1) streak = 0;
+  }
+
   void _recordActivity(int earnedXp) {
     final now = DateTime.now();
     final today = _dateKey(now);
     if (lastActivityDate != today) {
-      final previous = lastActivityDate == null
-          ? null
-          : DateTime.tryParse(lastActivityDate!);
-      if (previous != null && now.difference(previous).inDays == 1) {
+      final days = _daysSinceLastActivity(now);
+      if (days == 1) {
         streak += 1;
-      } else if (previous != null) {
+      } else if (days != null || streak < 1) {
         streak = 1;
       }
       lastActivityDate = today;

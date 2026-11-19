@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/collaboration/data/collaboration_store.dart';
 import '../../features/projects/data/project_progress_store.dart';
 import '../../features/terminal/domain/virtual_repository.dart';
+import '../app_info.dart';
 import '../storage/local_progress_store.dart';
 import '../storage/virtual_repository_store.dart';
 
@@ -62,7 +63,7 @@ class BackupService {
 
   Map<String, dynamic> createJson() => <String, dynamic>{
     'formatVersion': 2,
-    'appVersion': '1.0.0',
+    'appVersion': gitQuestVersion,
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'profile': profile.toJson(),
     'repository': repository.toJson(),
@@ -85,28 +86,26 @@ class BackupService {
       throw const FormatException('Version de sauvegarde non compatible.');
     }
     final isLegacy = version == 1;
-    final profileJson = isLegacy
-        ? decoded
-        : decoded['profile'] as Map<String, dynamic>?;
+    final rawProfile = isLegacy ? decoded : decoded['profile'];
+    final profileJson = rawProfile is Map<String, dynamic> ? rawProfile : null;
     if (profileJson == null ||
         profileJson['profile'] is! Map<String, dynamic>) {
       throw const FormatException('Le profil de la sauvegarde est incomplet.');
     }
     final profileData = profileJson['profile'] as Map<String, dynamic>;
-    final progress =
-        profileJson['progress'] as Map<String, dynamic>? ?? <String, dynamic>{};
-    final repositoryJson =
-        decoded['repository'] as Map<String, dynamic>? ?? <String, dynamic>{};
-    final collaborationJson =
-        decoded['collaboration'] as Map<String, dynamic>? ??
-        <String, dynamic>{};
-    final projectsJson =
-        decoded['projects'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    final progress = _map(profileJson['progress']);
+    final repositoryJson = _map(decoded['repository']);
+    final collaborationJson = _map(decoded['collaboration']);
+    final projectsJson = _map(decoded['projects']);
     final preview = BackupPreview(
       formatVersion: version as int,
-      exportedAt: DateTime.tryParse(decoded['exportedAt'] as String? ?? ''),
-      name: profileData['name'] as String? ?? 'Explorateur',
-      xp: profileData['xp'] as int? ?? 0,
+      exportedAt: DateTime.tryParse(
+        decoded['exportedAt'] is String ? decoded['exportedAt'] as String : '',
+      ),
+      name: profileData['name'] is String
+          ? profileData['name'] as String
+          : 'Explorateur',
+      xp: profileData['xp'] is int ? profileData['xp'] as int : 0,
       lessons: _listLength(progress['completedLessons']),
       missions: _listLength(progress['completedMissions']),
       commits: _listLength(repositoryJson['commits']),
@@ -115,7 +114,42 @@ class BackupService {
       projectSteps: _listLength(projectsJson['completedSteps']),
       isLegacy: isLegacy,
     );
+    _validate(decoded, profileJson, isLegacy: isLegacy);
     return ParsedBackup(json: decoded, preview: preview);
+  }
+
+  /// Reads every block without touching the current state, so that a
+  /// malformed file is rejected before anything is overwritten.
+  void _validate(
+    Map<String, dynamic> decoded,
+    Map<String, dynamic> profileJson, {
+    required bool isLegacy,
+  }) {
+    try {
+      LocalProgressStore.validateJson(profileJson);
+      final projectData = decoded['projects'];
+      if (projectData != null) {
+        final steps = (projectData as Map<String, dynamic>)['completedSteps'];
+        if (steps != null) steps as List<dynamic>;
+      }
+      if (isLegacy) return;
+      final repositoryJson = decoded['repository'];
+      if (repositoryJson != null) {
+        VirtualRepository.fromJson(repositoryJson as Map<String, dynamic>);
+      }
+      final collaborationJson = decoded['collaboration'];
+      if (collaborationJson != null) {
+        CollaborationStore.validateJson(
+          collaborationJson as Map<String, dynamic>,
+        );
+      }
+    } on FormatException {
+      rethrow;
+    } on Object {
+      throw const FormatException(
+        'La sauvegarde contient des données invalides. Rien n’a été modifié.',
+      );
+    }
   }
 
   Future<void> import(ParsedBackup backup, BackupImportMode mode) async {
@@ -159,3 +193,6 @@ class BackupService {
 }
 
 int _listLength(Object? value) => value is List<dynamic> ? value.length : 0;
+
+Map<String, dynamic> _map(Object? value) =>
+    value is Map<String, dynamic> ? value : <String, dynamic>{};

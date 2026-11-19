@@ -303,6 +303,24 @@ class SettingsScreen extends StatelessWidget {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Applies the reminder settings that an import may have changed.
+  Future<void> _syncReminder(AppScope scope) async {
+    final scheduler = scope.reminderScheduler;
+    if (scheduler == null) return;
+    try {
+      if (scope.store.reminderEnabled) {
+        await scheduler.scheduleDaily(
+          hour: scope.store.reminderHour,
+          minute: scope.store.reminderMinute,
+        );
+      } else {
+        await scheduler.cancel();
+      }
+    } on Object {
+      // The import succeeded; a notification failure must not undo it.
+    }
+  }
+
   BackupService _backupService(BuildContext context) {
     final scope = AppScope.of(context);
     return BackupService(
@@ -511,7 +529,9 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
     if (mode == null || !context.mounted) return;
+    final scope = AppScope.of(context);
     await _backupService(context).import(backup, mode);
+    await _syncReminder(scope);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
