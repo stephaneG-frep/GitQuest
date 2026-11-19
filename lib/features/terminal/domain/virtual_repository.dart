@@ -116,10 +116,27 @@ class VirtualRepository {
   RebaseOperation? pendingRebase;
   int _commitSequence = 0;
 
-  VirtualCommit createCommit(String message, {List<String>? parents}) {
-    _commitSequence += 1;
-    final id = (_commitSequence * 2654435761).toRadixString(16).substring(0, 7);
-    final snapshot = Map<String, String>.from(head?.snapshot ?? const {});
+  static const maxCommandHistory = 1000;
+  static const maxReflog = 300;
+
+  /// Generates a unique 7-character identifier.
+  ///
+  /// Multiplying by an odd constant modulo 2^28 is a bijection, so each
+  /// sequence number below 2^28 yields a distinct identifier.
+  String _nextCommitId() {
+    final existing = commits.map((commit) => commit.id).toSet();
+    while (true) {
+      _commitSequence += 1;
+      final id = ((_commitSequence * 2654435761) & 0xFFFFFFF)
+          .toRadixString(16)
+          .padLeft(7, '0');
+      if (!existing.contains(id)) return id;
+    }
+  }
+
+  /// Returns [base] updated with the content of the staged files.
+  Map<String, String> snapshotWithStaged(Map<String, String> base) {
+    final snapshot = Map<String, String>.from(base);
     for (final path in stagedFiles) {
       final file = files[path];
       if (file == null) {
@@ -128,6 +145,26 @@ class VirtualRepository {
         snapshot[path] = file.content;
       }
     }
+    return snapshot;
+  }
+
+  void addReflog(String entry) {
+    reflog.add(entry);
+    if (reflog.length > maxReflog) {
+      reflog.removeRange(0, reflog.length - maxReflog);
+    }
+  }
+
+  void addCommandToHistory(String command) {
+    commandHistory.add(command);
+    if (commandHistory.length > maxCommandHistory) {
+      commandHistory.removeRange(0, commandHistory.length - maxCommandHistory);
+    }
+  }
+
+  VirtualCommit createCommit(String message, {List<String>? parents}) {
+    final id = _nextCommitId();
+    final snapshot = snapshotWithStaged(head?.snapshot ?? const {});
     final commit = VirtualCommit(
       id: id,
       message: message,
@@ -142,7 +179,7 @@ class VirtualRepository {
     );
     commits.add(commit);
     branches[currentBranch] = id;
-    reflog.add('$id commit: $message');
+    addReflog('$id commit: $message');
     for (final path in stagedFiles) {
       files[path]?.state = FileState.committed;
     }
@@ -153,13 +190,8 @@ class VirtualRepository {
   VirtualCommit amendHead(String message) {
     final previous = head!;
     final previousIndex = commits.indexOf(previous);
-    _commitSequence += 1;
-    final id = (_commitSequence * 2654435761).toRadixString(16).substring(0, 7);
-    final snapshot = stagedFiles.isEmpty
-        ? previous.snapshot
-        : <String, String>{
-            for (final file in files.values) file.path: file.content,
-          };
+    final id = _nextCommitId();
+    final snapshot = snapshotWithStaged(previous.snapshot);
     final amended = VirtualCommit(
       id: id,
       message: message,
@@ -174,18 +206,32 @@ class VirtualRepository {
       files[path]?.state = FileState.committed;
     }
     stagedFiles.clear();
-    reflog.add('$id commit (amend): $message');
+    addReflog('$id commit (amend): $message');
     return amended;
   }
 
   VirtualCommit? commitByReference(String reference) {
     if (reference == 'HEAD') return head;
-    return commits
+    final exact = commits.where((commit) => commit.id == reference).firstOrNull;
+    if (exact != null || reference.isEmpty) return exact;
+    final matches = commits
         .where((commit) => commit.id.startsWith(reference))
-        .firstOrNull;
+        .toList();
+    return matches.length == 1 ? matches.single : null;
   }
 
+  /// Replaces the tracked files with [snapshot].
+  ///
+  /// Like Git, untracked files that do not exist in the snapshot are kept.
   void checkoutSnapshot(Map<String, String> snapshot) {
+    final untracked = files.values
+        .where(
+          (file) =>
+              file.state == FileState.untracked &&
+              !stagedFiles.contains(file.path) &&
+              !snapshot.containsKey(file.path),
+        )
+        .toList();
     files
       ..clear()
       ..addEntries(
@@ -195,7 +241,8 @@ class VirtualRepository {
             VirtualFile(entry.key, entry.value, state: FileState.committed),
           ),
         ),
-      );
+      )
+      ..addEntries(untracked.map((file) => MapEntry(file.path, file)));
     stagedFiles.clear();
   }
 
@@ -366,6 +413,7 @@ class VirtualRepository {
     }
     repository._commitSequence =
         json['commitSequence'] as int? ?? repository.commits.length;
+    repository._repairDuplicateCommitIds();
     if (repository.files.isEmpty) {
       repository.files['README.md'] = VirtualFile(
         'README.md',
@@ -373,6 +421,67 @@ class VirtualRepository {
       );
     }
     return repository;
+  }
+
+  /// Older versions could give two commits the same identifier (commit n and
+  /// commit 16n). Each duplicate receives a new identifier and references are
+  /// remapped: a parent points to the latest earlier commit with that id,
+  /// branches, tags and pending operations point to the latest one.
+  void _repairDuplicateCommitIds() {
+    final ids = commits.map((commit) => commit.id).toList();
+    if (ids.toSet().length == ids.length) return;
+    final seen = <String>{};
+    final newIds = <String>[];
+    for (final id in ids) {
+      if (seen.add(id)) {
+        newIds.add(id);
+        continue;
+      }
+      newIds.add(_nextCommitId());
+    }
+    String resolveBefore(String id, int index) {
+      for (var i = index - 1; i >= 0; i--) {
+        if (ids[i] == id) return newIds[i];
+      }
+      return id;
+    }
+
+    String resolveLatest(String id) {
+      final index = ids.lastIndexOf(id);
+      return index < 0 ? id : newIds[index];
+    }
+
+    final repaired = <VirtualCommit>[
+      for (var i = 0; i < commits.length; i++)
+        VirtualCommit(
+          id: newIds[i],
+          message: commits[i].message,
+          author: commits[i].author,
+          createdAt: commits[i].createdAt,
+          parentIds: commits[i].parentIds
+              .map((parent) => resolveBefore(parent, i))
+              .toList(),
+          snapshot: commits[i].snapshot,
+        ),
+    ];
+    commits
+      ..clear()
+      ..addAll(repaired);
+    for (final branch in branches.keys.toList()) {
+      final target = branches[branch];
+      if (target != null) branches[branch] = resolveLatest(target);
+    }
+    for (final tag in tags.keys.toList()) {
+      tags[tag] = resolveLatest(tags[tag]!);
+    }
+    final rebase = pendingRebase;
+    if (rebase != null) {
+      pendingRebase = RebaseOperation(
+        originalHeadId: resolveLatest(rebase.originalHeadId),
+        targetBranch: rebase.targetBranch,
+        pendingCommitIds: rebase.pendingCommitIds.map(resolveLatest).toList(),
+      );
+    }
   }
 
   void restoreFromJson(Map<String, dynamic> json) {

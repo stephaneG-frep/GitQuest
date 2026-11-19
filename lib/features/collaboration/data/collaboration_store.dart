@@ -238,6 +238,19 @@ class CollaborationStore extends ChangeNotifier {
         .toList(),
   };
 
+  /// Throws if [json] cannot be read. Nothing is modified.
+  static void validateJson(Map<String, dynamic> json) {
+    for (final value in json['issues'] as List<dynamic>? ?? <dynamic>[]) {
+      SimulatedIssue.fromJson(value as Map<String, dynamic>);
+    }
+    for (final value in json['pullRequests'] as List<dynamic>? ?? <dynamic>[]) {
+      SimulatedPullRequest.fromJson(value as Map<String, dynamic>);
+    }
+    json['nextIssueId'] as int?;
+    json['nextPullRequestId'] as int?;
+    json['branchProtectionEnabled'] as bool?;
+  }
+
   Future<void> restoreFromJson(Map<String, dynamic> json) async {
     final restoredIssues = (json['issues'] as List<dynamic>? ?? <dynamic>[])
         .map((value) => SimulatedIssue.fromJson(value as Map<String, dynamic>))

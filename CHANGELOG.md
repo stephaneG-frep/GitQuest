@@ -2,6 +2,20 @@
 
 ## Prochaine version
 
+### Corrections issues de l’audit
+
+- Identifiants de commit uniques : le 16ᵉ commit ne reprend plus l’identifiant du 1er. Les dépôts existants sont réparés au chargement.
+- `git revert` annule uniquement le commit visé et refuse proprement s’il a été recouvert par un commit plus récent.
+- `git stash` remet la copie de travail au dernier commit, inclut les fichiers préparés. Ajout de `git stash list`. `pop` protège les changements locaux.
+- `git commit --amend` n’embarque plus les fichiers non préparés et est refusé pendant une fusion ou un rebase.
+- Les fichiers non suivis sont conservés par `switch`, `merge`, `reset --hard` et ne bloquent plus un rebase.
+- Un fichier créé par `echo` est « non suivi » ; `git add .` ne prépare que les fichiers changés ; `reset --soft/--mixed` ne marque que les fichiers réellement concernés.
+- `git branch -d` signale une branche inexistante et protège une branche non fusionnée (`-D` pour forcer).
+- Historique des commandes et reflog bornés pour limiter la taille du stockage.
+- Import : la sauvegarde est entièrement validée avant toute modification, la taille de texte est bornée et le rappel est reprogrammé.
+- Un profil local corrompu n’empêche plus le démarrage. La série de jours s’affiche rompue après un jour manqué.
+- Version unique `gitQuestVersion` vérifiée contre le pubspec. Libellé Android « GitQuest » et signature release via `android/key.properties`.
+
 - Persistance complète du dépôt virtuel entre les lancements.
 - Ajout de `git commit --amend`, `git reset`, `git revert`, `git tag` et `git reflog`.
 - Ajout des missions « Mauvais message », « Commit indésirable » et « Préparer une version ».

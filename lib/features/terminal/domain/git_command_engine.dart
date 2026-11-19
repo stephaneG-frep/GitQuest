@@ -79,7 +79,7 @@ class GitCommandEngine {
   CommandResult _execute(String input) {
     final command = input.trim();
     if (command.isEmpty) return const CommandResult('');
-    repository.commandHistory.add(command);
+    repository.addCommandToHistory(command);
     final args = _tokenize(command);
     if (args.isEmpty) return const CommandResult('');
     if (args.first == 'help') return _help();
@@ -160,7 +160,7 @@ class GitCommandEngine {
   help, clear, pwd, ls, touch, cat, echo
   git init, status, add, commit, log, diff
   git branch, switch, checkout, merge
-  git restore, reset, revert, stash, tag, reflog
+  git restore, reset, revert, stash (pop, list), tag, reflog
   git cherry-pick, rebase
   git remote, push, pull, fetch
 
@@ -199,15 +199,21 @@ Astuce : commence par git init, puis git status.''');
     }
     final path = args.last;
     final content = args.sublist(1, args.length - 2).join(' ');
+    final existing = repository.files[path];
     final file = repository.files.putIfAbsent(
       path,
       () => VirtualFile(path, content),
     );
-    file
-      ..content = content
-      ..state = repository.commits.isEmpty
-          ? FileState.untracked
-          : FileState.modified;
+    file.content = content;
+    if (existing == null || existing.state == FileState.untracked) {
+      file.state = FileState.untracked;
+    } else if (!repository.stagedFiles.contains(path) &&
+        repository.conflicts[path] == null &&
+        repository.head?.snapshot[path] == content) {
+      file.state = FileState.committed;
+    } else {
+      file.state = FileState.modified;
+    }
     return CommandResult(
       '$path a été modifié.',
       type: TerminalOutputType.success,
@@ -296,8 +302,17 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     final paths = args[2] == '.'
-        ? repository.files.keys.toList()
+        ? repository.files.values
+              .where((file) => file.state != FileState.committed)
+              .map((file) => file.path)
+              .toList()
         : args.sublist(2);
+    if (paths.isEmpty) {
+      return const CommandResult(
+        'Aucun changement à préparer : la copie de travail est propre.',
+        type: TerminalOutputType.warning,
+      );
+    }
     final missing = paths
         .where((path) => !repository.files.containsKey(path))
         .toList();
@@ -326,6 +341,15 @@ Astuce : commence par git init, puis git status.''');
     if (amend && repository.head == null) {
       return const CommandResult(
         'Aucun commit à modifier. Crée d’abord un premier commit.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (amend &&
+        (repository.conflicts.isNotEmpty ||
+            repository.pendingRebase != null ||
+            repository.pendingMergeBranch != null)) {
+      return const CommandResult(
+        'Une fusion ou un rebase est en cours. Termine-le ou annule-le avant de modifier le dernier commit.',
         type: TerminalOutputType.error,
       );
     }
@@ -418,7 +442,7 @@ Astuce : commence par git init, puis git status.''');
             .join('\n'),
       );
     }
-    if (args[2] == '-d') {
+    if (args[2] == '-d' || args[2] == '-D') {
       if (args.length < 4) {
         return const CommandResult(
           'Indique la branche à supprimer.',
@@ -428,6 +452,23 @@ Astuce : commence par git init, puis git status.''');
       if (args[3] == repository.currentBranch) {
         return const CommandResult(
           'Impossible de supprimer la branche courante.',
+          type: TerminalOutputType.error,
+        );
+      }
+      if (!repository.branches.containsKey(args[3])) {
+        return CommandResult(
+          'Branche introuvable : ${args[3]}',
+          type: TerminalOutputType.error,
+        );
+      }
+      final branchHead = repository.branches[args[3]];
+      final currentHead = repository.branches[repository.currentBranch];
+      final merged =
+          branchHead == null ||
+          (currentHead != null && _isAncestor(branchHead, currentHead));
+      if (args[2] == '-d' && !merged) {
+        return CommandResult(
+          'La branche ${args[3]} n’est pas entièrement fusionnée.\nFusionne-la d’abord, ou force la suppression avec git branch -D ${args[3]}.',
           type: TerminalOutputType.error,
         );
       }
@@ -533,7 +574,7 @@ Astuce : commence par git init, puis git status.''');
     if (targetHead != null) {
       repository.checkoutSnapshot(targetHead.snapshot);
     }
-    repository.reflog.add('${targetHead?.id ?? '0000000'} checkout: $target');
+    repository.addReflog('${targetHead?.id ?? '0000000'} checkout: $target');
     return CommandResult(
       'Basculement sur la branche “$target”.',
       type: TerminalOutputType.success,
@@ -615,7 +656,7 @@ Astuce : commence par git init, puis git status.''');
       repository.branches[repository.currentBranch] = sourceHeadId;
       repository.checkoutSnapshot(sourceHead.snapshot);
       repository.mergedBranches.add(source);
-      repository.reflog.add('$sourceHeadId merge $source: fast-forward');
+      repository.addReflog('$sourceHeadId merge $source: fast-forward');
       return CommandResult(
         'Mise à jour en avance rapide vers $sourceHeadId.\nBranche $source fusionnée.',
         type: TerminalOutputType.success,
@@ -672,7 +713,7 @@ Astuce : commence par git init, puis git status.''');
       repository
         ..conflicts.addAll(conflicts)
         ..pendingMergeBranch = source;
-      repository.reflog.add(
+      repository.addReflog(
         '$currentHeadId merge $source: conflit dans ${conflicts.keys.join(', ')}',
       );
       for (final conflict in conflicts.values) {
@@ -752,7 +793,7 @@ Astuce : commence par git init, puis git status.''');
       repository.files[path]!.state = FileState.staged;
     }
     final commit = repository.createCommit(picked.message);
-    repository.reflog.add('${commit.id} cherry-pick: ${picked.id}');
+    repository.addReflog('${commit.id} cherry-pick: ${picked.id}');
     return CommandResult(
       '[${repository.currentBranch} ${commit.id}] ${commit.message}\nLe changement ${picked.id} a été rejoué sur la branche courante.',
       type: TerminalOutputType.success,
@@ -776,7 +817,7 @@ Astuce : commence par git init, puis git status.''');
       repository
         ..conflicts.clear()
         ..pendingRebase = null;
-      repository.reflog.add('${operation.originalHeadId} rebase: abort');
+      repository.addReflog('${operation.originalHeadId} rebase: abort');
       return const CommandResult(
         'Rebase annulé. La branche et les fichiers ont retrouvé leur état initial.',
         type: TerminalOutputType.success,
@@ -836,7 +877,9 @@ Astuce : commence par git init, puis git status.''');
     }
     if (repository.stagedFiles.isNotEmpty ||
         repository.files.values.any(
-          (file) => file.state != FileState.committed,
+          (file) =>
+              file.state != FileState.committed &&
+              file.state != FileState.untracked,
         )) {
       return const CommandResult(
         'La copie de travail doit être propre avant un rebase.',
@@ -940,7 +983,7 @@ Astuce : commence par git init, puis git status.''');
             state: FileState.conflicted,
           );
         }
-        repository.reflog.add(
+        repository.addReflog(
           '${repository.head?.id ?? '0000000'} rebase: conflit dans ${conflicting.join(', ')}',
         );
         return CommandResult(
@@ -955,7 +998,7 @@ Astuce : commence par git init, puis git status.''');
     }
     final target = operation.targetBranch;
     repository.pendingRebase = null;
-    repository.reflog.add('${repository.head!.id} rebase: onto $target');
+    repository.addReflog('${repository.head!.id} rebase: onto $target');
     return CommandResult(
       'Rebase terminé sur $target${replayed > 0 ? ' après $replayed commit(s) rejoué(s)' : ''}.\nLes identifiants ont changé : ne republie pas sans vérifier l’historique.',
       type: TerminalOutputType.success,
@@ -1062,6 +1105,12 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    if (repository.pendingRebase != null) {
+      return const CommandResult(
+        'Un rebase est en cours. Utilise git rebase --continue ou git rebase --abort.',
+        type: TerminalOutputType.error,
+      );
+    }
     final mode =
         args.where((arg) => arg.startsWith('--')).firstOrNull ?? '--mixed';
     if (!<String>{'--soft', '--mixed', '--hard'}.contains(mode)) {
@@ -1093,31 +1142,34 @@ Astuce : commence par git init, puis git status.''');
       }
     }
     final previous = repository.head!;
+    final targetSnapshot = target?.snapshot ?? <String, String>{};
     repository.branches[repository.currentBranch] = target?.id;
     if (mode == '--soft') {
-      repository.stagedFiles.addAll(repository.files.keys);
-      for (final file in repository.files.values) {
-        file.state = FileState.staged;
+      final changed = <String>{
+        ...repository.stagedFiles,
+        ..._changesBetween(targetSnapshot, previous.snapshot),
+      };
+      repository.stagedFiles.addAll(changed);
+      for (final path in changed.where(repository.files.containsKey)) {
+        repository.files[path]!.state = FileState.staged;
       }
     } else if (mode == '--mixed') {
       repository.stagedFiles.clear();
       for (final file in repository.files.values) {
-        file.state = FileState.modified;
+        final saved = targetSnapshot[file.path];
+        file.state = saved == null
+            ? FileState.untracked
+            : saved == file.content
+            ? FileState.committed
+            : FileState.modified;
       }
     } else {
+      repository.checkoutSnapshot(targetSnapshot);
       repository
-        ..files.clear()
-        ..stagedFiles.clear();
-      for (final entry
-          in target?.snapshot.entries ?? const <MapEntry<String, String>>[]) {
-        repository.files[entry.key] = VirtualFile(
-          entry.key,
-          entry.value,
-          state: FileState.committed,
-        );
-      }
+        ..conflicts.clear()
+        ..pendingMergeBranch = null;
     }
-    repository.reflog.add(
+    repository.addReflog(
       '${target?.id ?? '0000000'} reset: moving from ${previous.id} to $reference',
     );
     final warning = mode == '--hard'
@@ -1147,26 +1199,56 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.error,
       );
     }
+    if (repository.conflicts.isNotEmpty ||
+        repository.pendingRebase != null ||
+        repository.pendingMergeBranch != null) {
+      return const CommandResult(
+        'Termine ou annule l’opération en cours avant un revert.',
+        type: TerminalOutputType.error,
+      );
+    }
+    if (repository.stagedFiles.isNotEmpty ||
+        repository.files.values.any(
+          (file) => file.state == FileState.modified,
+        )) {
+      return const CommandResult(
+        'La copie de travail doit être propre avant un revert. Crée un commit ou utilise git stash.',
+        type: TerminalOutputType.error,
+      );
+    }
     final parent = target.parentIds.firstOrNull == null
         ? null
         : repository.commitByReference(target.parentIds.first);
-    repository.files.clear();
-    for (final entry
-        in parent?.snapshot.entries ?? const <MapEntry<String, String>>[]) {
-      repository.files[entry.key] = VirtualFile(
-        entry.key,
-        entry.value,
-        state: FileState.staged,
+    final before = parent?.snapshot ?? <String, String>{};
+    final changes = _changesBetween(before, target.snapshot);
+    if (changes.isEmpty) {
+      return CommandResult(
+        'Le commit ${target.id} n’introduit aucun changement à annuler.',
+        type: TerminalOutputType.warning,
       );
-      repository.stagedFiles.add(entry.key);
     }
-    if (parent == null) {
-      repository.stagedFiles.addAll(target.snapshot.keys);
-    } else {
-      repository.stagedFiles.addAll(<String>{
-        ...target.snapshot.keys,
-        ...parent.snapshot.keys,
-      });
+    final current = repository.head!.snapshot;
+    final conflicting = changes
+        .where((path) => current[path] != target.snapshot[path])
+        .toList();
+    if (conflicting.isNotEmpty) {
+      return CommandResult(
+        'Revert interrompu : ${conflicting.join(', ')} a encore changé après ${target.id}.\nCette simulation protège ton dépôt : annule d’abord les commits plus récents sur ce fichier.',
+        type: TerminalOutputType.warning,
+      );
+    }
+    for (final path in changes) {
+      final content = before[path];
+      if (content == null) {
+        repository.files.remove(path);
+      } else {
+        repository.files[path] = VirtualFile(
+          path,
+          content,
+          state: FileState.staged,
+        );
+      }
+      repository.stagedFiles.add(path);
     }
     final commit = repository.createCommit('Annule “${target.message}”');
     return CommandResult(
@@ -1197,7 +1279,7 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     repository.tags[name] = repository.head!.id;
-    repository.reflog.add('${repository.head!.id} tag: $name');
+    repository.addReflog('${repository.head!.id} tag: $name');
     return CommandResult(
       'Tag $name créé sur ${repository.head!.id}.',
       type: TerminalOutputType.success,
@@ -1216,6 +1298,18 @@ Astuce : commence par git init, puis git status.''');
   }
 
   CommandResult _stash(List<String> args) {
+    final error = _requireRepository();
+    if (error != null) return error;
+    if (args.length > 2 && args[2] == 'list') {
+      if (repository.stashes.isEmpty) {
+        return const CommandResult('Aucun stash enregistré.');
+      }
+      return CommandResult(
+        repository.stashes.reversed.indexed
+            .map((entry) => 'stash@{${entry.$1}}: ${entry.$2.keys.join(', ')}')
+            .join('\n'),
+      );
+    }
     if (args.length > 2 && args[2] == 'pop') {
       if (repository.stashes.isEmpty) {
         return const CommandResult(
@@ -1223,12 +1317,34 @@ Astuce : commence par git init, puis git status.''');
           type: TerminalOutputType.warning,
         );
       }
-      final stash = repository.stashes.removeLast();
+      if (repository.conflicts.isNotEmpty || repository.pendingRebase != null) {
+        return const CommandResult(
+          'Termine ou annule l’opération en cours avant de restaurer un stash.',
+          type: TerminalOutputType.error,
+        );
+      }
+      final stash = repository.stashes.last;
+      final overwritten = stash.keys.where((path) {
+        final file = repository.files[path];
+        return file != null &&
+            (file.state == FileState.modified ||
+                repository.stagedFiles.contains(path));
+      }).toList();
+      if (overwritten.isNotEmpty) {
+        return CommandResult(
+          'Tes changements locaux sur ${overwritten.join(', ')} seraient écrasés.\nCrée un commit ou restaure ces fichiers avant git stash pop.',
+          type: TerminalOutputType.error,
+        );
+      }
+      repository.stashes.removeLast();
+      final saved = repository.head?.snapshot ?? <String, String>{};
       for (final entry in stash.entries) {
         repository.files[entry.key] = VirtualFile(
           entry.key,
           entry.value,
-          state: FileState.modified,
+          state: saved.containsKey(entry.key)
+              ? FileState.modified
+              : FileState.untracked,
         );
       }
       return const CommandResult(
@@ -1236,9 +1352,17 @@ Astuce : commence par git init, puis git status.''');
         type: TerminalOutputType.success,
       );
     }
+    if (repository.conflicts.isNotEmpty || repository.pendingRebase != null) {
+      return const CommandResult(
+        'Termine ou annule l’opération en cours avant de créer un stash.',
+        type: TerminalOutputType.error,
+      );
+    }
     final changed = <String, String>{
       for (final file in repository.files.values.where(
-        (file) => file.state == FileState.modified,
+        (file) =>
+            file.state == FileState.modified ||
+            repository.stagedFiles.contains(file.path),
       ))
         file.path: file.content,
     };
@@ -1249,11 +1373,22 @@ Astuce : commence par git init, puis git status.''');
       );
     }
     repository.stashes.add(changed);
+    final saved = repository.head?.snapshot ?? <String, String>{};
     for (final path in changed.keys) {
-      repository.files[path]!.state = FileState.committed;
+      repository.stagedFiles.remove(path);
+      final content = saved[path];
+      if (content == null) {
+        repository.files.remove(path);
+      } else {
+        repository.files[path] = VirtualFile(
+          path,
+          content,
+          state: FileState.committed,
+        );
+      }
     }
     return const CommandResult(
-      'Modifications enregistrées dans le stash.',
+      'Modifications enregistrées dans le stash. La copie de travail est revenue au dernier commit.',
       type: TerminalOutputType.success,
     );
   }
