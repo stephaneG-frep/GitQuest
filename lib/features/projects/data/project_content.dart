@@ -215,4 +215,92 @@ const projects = <ProjectDefinition>[
       ),
     ],
   ),
+  ProjectDefinition(
+    id: 'github-pages-site',
+    title: 'Site GitHub Pages',
+    subtitle: 'Prépare et publie un site statique',
+    story:
+        'Tu prépares un petit site vitrine. Dans le laboratoire, tu construis son historique et tu le publies. Sur un vrai compte, il ne restera qu’à activer Settings → Pages pour qu’il soit en ligne.',
+    rewardXp: 380,
+    steps: [
+      ProjectStepDefinition(
+        id: 'pages-init',
+        title: 'Initialiser le dépôt',
+        instruction:
+            'Transforme le laboratoire en dépôt Git, ou clone un dépôt vide après réinitialisation.',
+        requirement: ProjectRequirement.repositoryInitialized,
+        commandHint: 'git init',
+        xp: 30,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-index',
+        title: 'Créer la page d’accueil',
+        instruction:
+            'GitHub Pages affiche index.html : crée-le et enregistre-le dans un commit.',
+        requirement: ProjectRequirement.fileCommitted,
+        target: 'index.html',
+        commandHint:
+            'echo "<h1>Bienvenue</h1>" > index.html puis git add index.html et git commit -m "feat: ajoute la page d’accueil"',
+        xp: 45,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-style-branch',
+        title: 'Préparer le style à part',
+        instruction: 'Crée la branche feature/style pour la feuille de style.',
+        requirement: ProjectRequirement.branchExists,
+        target: 'feature/style',
+        commandHint: 'git switch -c feature/style',
+        xp: 40,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-style-file',
+        title: 'Ajouter la feuille de style',
+        instruction: 'Sur feature/style, enregistre style.css dans un commit.',
+        requirement: ProjectRequirement.fileCommitted,
+        target: 'style.css',
+        commandHint:
+            'echo "body { font-family: sans-serif; }" > style.css puis git add style.css et git commit -m "feat: ajoute le style"',
+        xp: 45,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-style-merge',
+        title: 'Intégrer le style',
+        instruction: 'Reviens sur main et fusionne feature/style.',
+        requirement: ProjectRequirement.branchMerged,
+        target: 'feature/style',
+        commandHint: 'git switch main puis git merge feature/style',
+        xp: 55,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-remote',
+        title: 'Connecter GitHub',
+        instruction:
+            'Ajoute le dépôt distant origin. Sur un vrai compte, crée d’abord le dépôt sur github.com.',
+        requirement: ProjectRequirement.remoteExists,
+        target: 'origin',
+        commandHint:
+            'git remote add origin https://github.com/pseudo/pseudo.github.io.git',
+        xp: 40,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-publish',
+        title: 'Publier main avec suivi',
+        instruction:
+            'Pousse main en mémorisant sa branche distante. Sur GitHub, active ensuite Settings → Pages → Deploy from a branch → main.',
+        requirement: ProjectRequirement.upstreamConfigured,
+        target: 'main',
+        commandHint: 'git push -u origin main',
+        xp: 60,
+      ),
+      ProjectStepDefinition(
+        id: 'pages-release',
+        title: 'Marquer la mise en ligne',
+        instruction: 'Pose le tag v1.0.0 sur la version publiée.',
+        requirement: ProjectRequirement.tagExists,
+        target: 'v1.0.0',
+        commandHint: 'git tag v1.0.0',
+        xp: 65,
+      ),
+    ],
+  ),
 ];

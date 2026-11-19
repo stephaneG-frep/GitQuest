@@ -46,6 +46,17 @@ class _TerminalScreenState extends State<TerminalScreen> {
     'rebase main',
     'rebase --continue',
     'rebase --abort',
+    'clone https://github.com/equipe/site.git',
+    'rm ',
+    'rm --cached ',
+    'mv ',
+    'log --oneline --graph --all',
+    'switch --detach ',
+    'switch -',
+    'branch -vv',
+    'push -u origin main',
+    'reset --soft HEAD~',
+    'stash list',
   ];
 
   @override

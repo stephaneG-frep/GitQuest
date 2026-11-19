@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/app_scope.dart';
+import '../../core/app_info.dart';
 import '../../core/backup/backup_service.dart';
 import '../../core/storage/local_progress_store.dart';
 import '../help/presentation/help_screen.dart';
@@ -175,7 +176,9 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.info_outline_rounded),
                 title: Text('GitQuest'),
-                subtitle: Text('Version 1.1.0 • Apprentissage hors connexion'),
+                subtitle: Text(
+                  'Version $gitQuestVersion • Apprentissage hors connexion',
+                ),
               ),
             ],
           ),

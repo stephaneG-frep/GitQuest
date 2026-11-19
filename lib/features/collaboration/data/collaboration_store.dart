@@ -8,6 +8,9 @@ import '../domain/collaboration_models.dart';
 class CollaborationStore extends ChangeNotifier {
   static const _storageKey = 'gitquest_collaboration_v1';
 
+  /// Number of example issues created on first launch (ids 1 to 2).
+  static const seedIssueCount = 2;
+
   final List<SimulatedIssue> issues = <SimulatedIssue>[];
   final List<SimulatedPullRequest> pullRequests = <SimulatedPullRequest>[];
   bool branchProtectionEnabled = true;

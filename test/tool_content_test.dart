@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gitquest/features/tools/data/tool_content.dart';
 
 void main() {
-  test('fournit trente situations et trente définitions locales', () {
-    expect(commandReferences, hasLength(30));
-    expect(glossaryEntries, hasLength(30));
+  test('fournit quarante et une situations et quarante définitions', () {
+    expect(commandReferences, hasLength(41));
+    expect(glossaryEntries, hasLength(40));
     expect(
       commandReferences.map((entry) => entry.command).toSet(),
       hasLength(commandReferences.length),

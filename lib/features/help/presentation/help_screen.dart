@@ -88,7 +88,7 @@ class HelpScreen extends StatelessWidget {
                   title: 'Parcours et XP',
                   summary: '58 leçons réparties sur huit niveaux.',
                   details:
-                      'Chaque leçon présente une notion puis un questionnaire. Réponds une première fois pour voir la correction, corrige si nécessaire, puis termine la leçon pour recevoir 50 XP. Ta progression est enregistrée automatiquement.',
+                      'Chaque leçon présente une notion puis un questionnaire. Réponds une première fois pour voir la correction, corrige si nécessaire, puis termine la leçon pour recevoir 50 XP. Ta progression est enregistrée automatiquement. Le niveau 8, GitHub en pratique, guide pas à pas sur github.com : jeton d’accès, clé SSH, GitHub Pages, profil, Actions et secrets.',
                 ),
                 const _HelpTopic(
                   icon: Icons.terminal_rounded,
@@ -96,13 +96,13 @@ class HelpScreen extends StatelessWidget {
                   title: 'Terminal sécurisé',
                   summary: 'Un laboratoire Git entièrement simulé.',
                   details:
-                      'Les commandes ne touchent jamais aux fichiers réels du téléphone. Commence par git init, utilise git status quand tu hésites et tape help pour afficher les commandes disponibles. L’icône de branche en haut ouvre le dépôt visuel.',
+                      'Les commandes ne touchent jamais aux fichiers réels du téléphone. Commence par git init, ou par git clone après avoir réinitialisé le laboratoire avec le bouton ↺. Utilise git status quand tu hésites et tape help pour afficher les commandes disponibles. Tu peux aussi supprimer ou renommer avec git rm et git mv, dessiner l’historique avec git log --oneline --graph --all, explorer un ancien commit avec git switch --detach et suivre une branche distante avec git push -u. L’icône de branche en haut ouvre le dépôt visuel.',
                 ),
                 const _HelpTopic(
                   icon: Icons.flag_rounded,
                   color: AppColors.violet,
                   title: 'Missions',
-                  summary: '25 défis validés sur le résultat obtenu.',
+                  summary: '30 défis validés sur le résultat obtenu.',
                   details:
                       'Tu peux choisir tes propres commandes : GitQuest vérifie l’état final du dépôt. Trois indices progressifs sont disponibles. Le dépôt est partagé avec le terminal principal, donc tu peux préparer une mission à plusieurs endroits.',
                 ),
@@ -120,7 +120,7 @@ class HelpScreen extends StatelessWidget {
                   title: 'Projets fil rouge',
                   summary: 'Des scénarios complets en plusieurs étapes.',
                   details:
-                      'Chaque étape indique où agir et vérifie le véritable dépôt ou GitHub Lab. Les étapes doivent être accomplies dans l’ordre et la progression reprend automatiquement.',
+                      'Quatre projets, dont la publication d’un site avec GitHub Pages. Chaque étape indique où agir et vérifie le véritable dépôt ou GitHub Lab. Les étapes doivent être accomplies dans l’ordre et la progression reprend automatiquement.',
                 ),
                 const _HelpTopic(
                   icon: Icons.auto_awesome_rounded,
@@ -128,7 +128,7 @@ class HelpScreen extends StatelessWidget {
                   title: 'Boîte à outils',
                   summary: 'Assistant, aide-mémoire et glossaire.',
                   details:
-                      'Décris ta situation pour trouver une commande, consulte les risques et exemples, ajoute tes commandes favorites ou recherche une définition Git et GitHub.',
+                      'Décris ta situation pour trouver une commande parmi 41, consulte les risques et exemples, ajoute tes commandes favorites ou recherche l’une des 40 définitions Git et GitHub.',
                 ),
                 const AppSectionHeader('Sauvegarde et réglages'),
                 const QuestCard(
